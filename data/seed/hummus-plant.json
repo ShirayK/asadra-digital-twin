@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "source": { "kind": "seed", "exportedAt": "2026-10-30T12:00:00.000Z" },
+  "site": {
+    "id": "hummus-demo",
+    "name": "מפעל חומוס — דמו",
+    "widthM": 30,
+    "depthM": 20
+  },
+  "allergens": [
+    { "code": "SESAME", "name": "שומשום" },
+    { "code": "GLUTEN", "name": "גלוטן" }
+  ],
+  "zones": [
+    { "id": "z-receiving",  "name": "קבלה",          "hygieneClass": "RAW",       "x": 3,  "z": 4,  "width": 6,  "depth": 6,  "allergenCodes": [] },
+    { "id": "z-soaking",    "name": "השריה ובישול",   "hygieneClass": "LOW_RISK",  "x": 10, "z": 4,  "width": 6,  "depth": 6,  "allergenCodes": [] },
+    { "id": "z-tahini",     "name": "טחינה",           "hygieneClass": "LOW_RISK",  "x": 17, "z": 4,  "width": 6,  "depth": 6,  "allergenCodes": ["SESAME"] },
+    { "id": "z-highcare",   "name": "קירור ואזור נקי", "hygieneClass": "HIGH_CARE", "x": 10, "z": 14, "width": 10, "depth": 6,  "allergenCodes": [] },
+    { "id": "z-packaging",  "name": "אריזה",           "hygieneClass": "PACKAGING", "x": 22, "z": 14, "width": 6,  "depth": 6,  "allergenCodes": [] },
+    { "id": "z-storage",    "name": "מחסן קירור",      "hygieneClass": "STORAGE",   "x": 27, "z": 4,  "width": 4,  "depth": 6,  "allergenCodes": [] }
+  ],
+  "stations": [
+    {
+      "id": "s-receiving-temp",
+      "name": "מדד טמפרטורה — קבלה",
+      "controlType": "PRP",
+      "position": { "x": 3, "z": 4 },
+      "zoneId": "z-receiving",
+      "fields": [
+        { "key": "temp", "label": "טמפרטורה", "unit": "°C", "max": 8, "monitoringFrequency": "כל משלוח", "correctiveActionText": "דחה משלוח אם > 8°C" }
+      ]
+    },
+    {
+      "id": "s-soaking",
+      "name": "תחנת השריה",
+      "controlType": "CP",
+      "position": { "x": 10, "z": 4 },
+      "zoneId": "z-soaking",
+      "fields": [
+        { "key": "duration_h", "label": "זמן השריה", "unit": "שעות", "min": 8, "max": 16, "monitoringFrequency": "כל אצווה" }
+      ]
+    },
+    {
+      "id": "s-cooking",
+      "name": "בישול (CCP)",
+      "controlType": "CCP",
+      "position": { "x": 13, "z": 4 },
+      "zoneId": "z-soaking",
+      "fields": [
+        { "key": "temp", "label": "טמפרטורה", "unit": "°C", "min": 90, "monitoringFrequency": "רציף", "correctiveActionText": "הפסק בישול ובדוק ציוד אם < 90°C" }
+      ]
+    },
+    {
+      "id": "s-cooling",
+      "name": "קירור (CCP)",
+      "controlType": "CCP",
+      "position": { "x": 10, "z": 14 },
+      "zoneId": "z-highcare",
+      "fields": [
+        { "key": "temp", "label": "טמפרטורה", "unit": "°C", "max": 5, "monitoringFrequency": "כל שעה", "correctiveActionText": "הכנס לקירור מהיר אם > 5°C" }
+      ]
+    },
+    {
+      "id": "s-metal-detector",
+      "name": "גלאי מתכות (CCP)",
+      "controlType": "CCP",
+      "position": { "x": 20, "z": 14 },
+      "zoneId": "z-packaging",
+      "fields": [
+        { "key": "test_passed", "label": "עבר בדיקה", "unit": "", "min": 1, "max": 1, "monitoringFrequency": "כל אצווה", "correctiveActionText": "בידוד אצווה ובדיקה חוזרת" }
+      ]
+    },
+    {
+      "id": "s-packaging",
+      "name": "אריזה",
+      "controlType": "PRP",
+      "position": { "x": 22, "z": 14 },
+      "zoneId": "z-packaging",
+      "fields": [
+        { "key": "seal_ok", "label": "איטום תקין", "unit": "", "min": 1, "max": 1, "monitoringFrequency": "כל אצווה" }
+      ]
+    }
+  ],
+  "process": {
+    "id": "proc-hummus",
+    "name": "תהליך ייצור חומוס",
+    "steps": [
+      { "id": "step-receive",  "name": "קבלת חומרי גלם",  "type": "MATERIAL_INPUT",  "sortOrder": 1, "stationId": "s-receiving-temp" },
+      { "id": "step-soak",     "name": "השריה",            "type": "CP",              "sortOrder": 2, "stationId": "s-soaking" },
+      { "id": "step-cook",     "name": "בישול",            "type": "CCP",             "sortOrder": 3, "stationId": "s-cooking" },
+      { "id": "step-cool",     "name": "קירור",            "type": "CCP",             "sortOrder": 4, "stationId": "s-cooling" },
+      { "id": "step-detect",   "name": "גלאי מתכות",       "type": "CCP",             "sortOrder": 5, "stationId": "s-metal-detector" },
+      { "id": "step-pack",     "name": "אריזה",            "type": "PACKAGING",       "sortOrder": 6, "stationId": "s-packaging" },
+      { "id": "step-output",   "name": "מוצר מוגמר",       "type": "OUTPUT",          "sortOrder": 7, "position": { "x": 27, "z": 14 } }
+    ],
+    "edges": [
+      { "from": "step-receive", "to": "step-soak" },
+      { "from": "step-soak",    "to": "step-cook" },
+      { "from": "step-cook",    "to": "step-cool",   "label": "RAW→HIGH_CARE without CCP (intentional demo)" },
+      { "from": "step-cool",    "to": "step-detect" },
+      { "from": "step-detect",  "to": "step-pack" },
+      { "from": "step-pack",    "to": "step-output" }
+    ]
+  },
+  "readings": [
+    {
+      "id": "r-001", "stationId": "s-receiving-temp", "recordedAt": "2026-10-30T08:00:00.000Z",
+      "values": { "temp": 4 },
+      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0001",
+      "prevHash": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "id": "r-002", "stationId": "s-soaking", "recordedAt": "2026-10-30T08:30:00.000Z",
+      "values": { "duration_h": 12 },
+      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0002",
+      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0001"
+    },
+    {
+      "id": "r-003", "stationId": "s-cooking", "recordedAt": "2026-10-30T09:00:00.000Z",
+      "values": { "temp": 95 },
+      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0003",
+      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0002"
+    },
+    {
+      "id": "r-004", "stationId": "s-cooling", "recordedAt": "2026-10-30T10:00:00.000Z",
+      "values": { "temp": 9 },
+      "correctiveAction": "הכנס לקירור מהיר — נמדד 9°C מול גבול 5°C",
+      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0004",
+      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0003"
+    },
+    {
+      "id": "r-005", "stationId": "s-metal-detector", "recordedAt": "2026-10-30T10:30:00.000Z",
+      "values": { "test_passed": 1 },
+      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0005",
+      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0004"
+    },
+    {
+      "id": "r-006", "stationId": "s-packaging", "recordedAt": "2026-10-30T11:00:00.000Z",
+      "values": { "seal_ok": 1 },
+      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0006",
+      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0005"
+    }
+  ]
+}

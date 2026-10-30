@@ -1,0 +1,73 @@
+{
+  "common": {
+    "appName": "אסדרא — תאום דיגיטלי",
+    "loading": "טוען…",
+    "error": "שגיאה",
+    "close": "סגור",
+    "export": "ייצוא JSON",
+    "import": "ייבוא JSON",
+    "reset": "אפס פריסה",
+    "save": "שמור",
+    "cancel": "ביטול"
+  },
+  "nav": {
+    "home": "ראשי",
+    "twin": "תאום דיגיטלי",
+    "language": "שפה"
+  },
+  "home": {
+    "headline": "תאום דיגיטלי של רצפת הייצור",
+    "subheadline": "ראו את המפעל שלכם בתלת-ממד — CCP, זרימת חומר והפרדת אזורים במבט אחד.",
+    "cta": "פתח תאום"
+  },
+  "twin": {
+    "title": "תאום דיגיטלי",
+    "toggleFlow": "זרימת חומר",
+    "toggleSeparation": "בדיקת הפרדה",
+    "editMode": "מצב עריכה",
+    "guidedTour": "סיור מודרך",
+    "issues": "בעיות",
+    "noIssues": "לא נמצאו בעיות",
+    "noData": "אין נתונים",
+    "chainVerified": "שרשרת hash מאומתת",
+    "chainInvalid": "שרשרת hash לא תקינה"
+  },
+  "status": {
+    "OK": "תקין",
+    "OUT_OF_RANGE": "חריגה",
+    "NO_DATA": "אין מדידה",
+    "STALE": "מדידה ישנה"
+  },
+  "controlType": {
+    "CCP": "נקודת בקרה קריטית",
+    "CP": "נקודת בקרה",
+    "PRP": "תוכנית מוקדמת"
+  },
+  "hygieneClass": {
+    "RAW": "חומר גלם",
+    "LOW_RISK": "סיכון נמוך",
+    "HIGH_CARE": "טיפול גבוה",
+    "PACKAGING": "אריזה",
+    "STORAGE": "מחסן",
+    "NON_FOOD": "לא מזון"
+  },
+  "separation": {
+    "RAW_TO_HIGH_CARE_WITHOUT_CCP": "מעבר מאזור גולמי לאזור נקי ללא שלב הריגה",
+    "ALLERGEN_CROSS_CONTACT": "סיכון מגע צולב של אלרגן"
+  },
+  "panel": {
+    "lastReadings": "5 מדידות אחרונות",
+    "limits": "גבולות",
+    "correctiveAction": "פעולה מתקנת",
+    "recordedAt": "נרשם ב",
+    "noReadings": "אין מדידות",
+    "min": "מינ׳",
+    "max": "מקס׳"
+  },
+  "tour": {
+    "next": "הבא",
+    "prev": "הקודם",
+    "exit": "יציאה מהסיור",
+    "stepOf": "שלב {current} מתוך {total}"
+  }
+}

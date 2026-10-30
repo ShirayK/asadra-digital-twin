@@ -1,0 +1,73 @@
+{
+  "common": {
+    "appName": "Asadra — Digital Twin",
+    "loading": "Loading…",
+    "error": "Error",
+    "close": "Close",
+    "export": "Export JSON",
+    "import": "Import JSON",
+    "reset": "Reset layout",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "nav": {
+    "home": "Home",
+    "twin": "Digital Twin",
+    "language": "Language"
+  },
+  "home": {
+    "headline": "Production Floor Digital Twin",
+    "subheadline": "See your factory in 3-D — CCPs, material flow and zone separation at a glance.",
+    "cta": "Open Twin"
+  },
+  "twin": {
+    "title": "Digital Twin",
+    "toggleFlow": "Material flow",
+    "toggleSeparation": "Separation check",
+    "editMode": "Edit mode",
+    "guidedTour": "Guided tour",
+    "issues": "Issues",
+    "noIssues": "No issues found",
+    "noData": "No data",
+    "chainVerified": "Hash chain verified",
+    "chainInvalid": "Hash chain invalid"
+  },
+  "status": {
+    "OK": "OK",
+    "OUT_OF_RANGE": "Out of range",
+    "NO_DATA": "No data",
+    "STALE": "Stale"
+  },
+  "controlType": {
+    "CCP": "Critical Control Point",
+    "CP": "Control Point",
+    "PRP": "Pre-requisite Programme"
+  },
+  "hygieneClass": {
+    "RAW": "Raw",
+    "LOW_RISK": "Low risk",
+    "HIGH_CARE": "High care",
+    "PACKAGING": "Packaging",
+    "STORAGE": "Storage",
+    "NON_FOOD": "Non-food"
+  },
+  "separation": {
+    "RAW_TO_HIGH_CARE_WITHOUT_CCP": "Raw to high-care zone without a kill step",
+    "ALLERGEN_CROSS_CONTACT": "Allergen cross-contact risk"
+  },
+  "panel": {
+    "lastReadings": "Last 5 readings",
+    "limits": "Limits",
+    "correctiveAction": "Corrective action",
+    "recordedAt": "Recorded at",
+    "noReadings": "No readings",
+    "min": "Min",
+    "max": "Max"
+  },
+  "tour": {
+    "next": "Next",
+    "prev": "Previous",
+    "exit": "Exit tour",
+    "stepOf": "Step {current} of {total}"
+  }
+}
