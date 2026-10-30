@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
+import SidePanel from './side-panel';
 
 // Load the 3-D canvas only on the client (no SSR) — Prompt 5 implementation
 const TwinCanvas = dynamic(() => import('./twin-canvas'), { ssr: false });
@@ -31,6 +32,14 @@ export default function TwinView({ dto, locale }: TwinViewProps) {
   const issueCount = dto.separationIssues.length;
 
   return (
+    <>
+    {/* ── Side panel (Prompt 6) ───────────────────────────────────────────── */}
+    <SidePanel
+      station={selectedStation}
+      locale={locale}
+      dir={dir}
+      onClose={() => setSelectedStation(null)}
+    />
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* ── Status summary bar ─────────────────────────────────────────── */}
       <div
@@ -137,50 +146,8 @@ export default function TwinView({ dto, locale }: TwinViewProps) {
         </ul>
       )}
 
-      {/* ── Selected station quick-info ─────────────────────────────────── */}
-      {selectedStation && (
-        <div
-          style={{
-            padding: '0.75rem 1rem',
-            background: '#f1f5f9',
-            borderRadius: '6px',
-            border: '1px solid #e2e8f0',
-            fontSize: '0.875rem',
-            direction: dir,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <strong>{selectedStation.name}</strong>
-            <button
-              onClick={() => setSelectedStation(null)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                color: '#64748b',
-              }}
-              aria-label={t.common.close}
-            >
-              ×
-            </button>
-          </div>
-          <div style={{ color: '#64748b', marginTop: '0.25rem' }}>
-            {t.controlType[selectedStation.controlType]} —{' '}
-            <span
-              style={{
-                background: statusColor(selectedStation.status),
-                color: '#fff',
-                padding: '1px 6px',
-                borderRadius: '3px',
-              }}
-            >
-              {t.status[selectedStation.status]}
-            </span>
-          </div>
-        </div>
-      )}
     </div>
+    </>
   );
 }
 
