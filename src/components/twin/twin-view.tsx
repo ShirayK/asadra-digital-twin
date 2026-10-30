@@ -1,11 +1,12 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import type { TwinDTO } from '@/app/[locale]/twin/page';
+import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
 
-// Load the 3-D canvas only on the client (no SSR)
+// Load the 3-D canvas only on the client (no SSR) — Prompt 5 implementation
 const TwinCanvas = dynamic(() => import('./twin-canvas'), { ssr: false });
 
 interface TwinViewProps {
@@ -15,11 +16,17 @@ interface TwinViewProps {
 
 /**
  * Client component that receives the precomputed DTO from the server and
- * orchestrates the twin UI: status summary, canvas placeholder, and issues list.
- * The full 3-D scene is wired up in Prompt 5.
+ * orchestrates the twin UI: status summary, 3-D canvas, and issues list.
  */
 export default function TwinView({ dto, locale }: TwinViewProps) {
   const t = getDictionary(locale);
+  const dir = locale === 'he' ? 'rtl' : 'ltr';
+
+  const [selectedStation, setSelectedStation] = useState<StationDTO | null>(null);
+
+  const handleStationClick = useCallback((station: StationDTO) => {
+    setSelectedStation((prev) => (prev?.id === station.id ? null : station));
+  }, []);
 
   const issueCount = dto.separationIssues.length;
 
@@ -32,27 +39,36 @@ export default function TwinView({ dto, locale }: TwinViewProps) {
           flexWrap: 'wrap',
           gap: '0.5rem',
           fontSize: '0.875rem',
+          direction: dir,
         }}
       >
         {dto.stations.map((station) => (
-          <span
+          <button
             key={station.id}
+            onClick={() => handleStationClick(station)}
             style={{
               padding: '0.25rem 0.75rem',
               borderRadius: '4px',
               background: statusColor(station.status),
               color: '#fff',
               fontWeight: 500,
+              border: selectedStation?.id === station.id ? '2px solid #fff' : '2px solid transparent',
+              cursor: 'pointer',
             }}
             title={`${station.name} — ${t.status[station.status]}`}
           >
             {station.name}
-          </span>
+          </button>
         ))}
       </div>
 
-      {/* ── 3-D Canvas (placeholder until Prompt 5) ───────────────────── */}
-      <TwinCanvas />
+      {/* ── 3-D Canvas ─────────────────────────────────────────────────── */}
+      <TwinCanvas
+        dto={dto}
+        locale={locale}
+        dir={dir}
+        onStationClick={handleStationClick}
+      />
 
       {/* ── Info row: issues + chain ───────────────────────────────────── */}
       <div
@@ -62,6 +78,7 @@ export default function TwinView({ dto, locale }: TwinViewProps) {
           flexWrap: 'wrap',
           fontSize: '0.875rem',
           alignItems: 'center',
+          direction: dir,
         }}
       >
         {/* Separation issues badge */}
@@ -103,9 +120,10 @@ export default function TwinView({ dto, locale }: TwinViewProps) {
         <ul
           style={{
             margin: 0,
-            padding: '0 1.25rem',
+            padding: dir === 'rtl' ? '0 1.25rem 0 0' : '0 0 0 1.25rem',
             fontSize: '0.875rem',
             color: '#b91c1c',
+            direction: dir,
           }}
         >
           {dto.separationIssues.map((issue, i) => (
@@ -117,6 +135,50 @@ export default function TwinView({ dto, locale }: TwinViewProps) {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* ── Selected station quick-info ─────────────────────────────────── */}
+      {selectedStation && (
+        <div
+          style={{
+            padding: '0.75rem 1rem',
+            background: '#f1f5f9',
+            borderRadius: '6px',
+            border: '1px solid #e2e8f0',
+            fontSize: '0.875rem',
+            direction: dir,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <strong>{selectedStation.name}</strong>
+            <button
+              onClick={() => setSelectedStation(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                color: '#64748b',
+              }}
+              aria-label={t.common.close}
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ color: '#64748b', marginTop: '0.25rem' }}>
+            {t.controlType[selectedStation.controlType]} —{' '}
+            <span
+              style={{
+                background: statusColor(selectedStation.status),
+                color: '#fff',
+                padding: '1px 6px',
+                borderRadius: '3px',
+              }}
+            >
+              {t.status[selectedStation.status]}
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );

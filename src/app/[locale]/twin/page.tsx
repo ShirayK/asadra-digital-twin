@@ -3,7 +3,7 @@ import { getStationStatus, type StationStatus } from '@/domain/status';
 import { buildFlowPaths, type FlowSegment } from '@/domain/flow';
 import { findSeparationIssues, type SeparationIssue } from '@/domain/separation';
 import { verifyReadingChain, type ChainVerificationResult } from '@/domain/chain';
-import type { Reading, Station } from '@/domain/schema';
+import type { Reading, Station, Zone } from '@/domain/schema';
 import { getDictionary, locales, defaultLocale, type Locale } from '@/i18n';
 import TwinView from '@/components/twin/twin-view';
 
@@ -26,6 +26,7 @@ export interface TwinDTO {
   siteName: string;
   siteWidth: number;
   siteDepth: number;
+  zones: Zone[];
   stations: StationDTO[];
   flowSegments: FlowSegment[];
   separationIssues: SeparationIssue[];
@@ -91,6 +92,7 @@ export default async function TwinPage({ params }: { params: { locale: string } 
     siteName: dataset.site.name,
     siteWidth: dataset.site.widthM,
     siteDepth: dataset.site.depthM,
+    zones: dataset.zones,
     stations: stationDTOs,
     flowSegments,
     separationIssues,
