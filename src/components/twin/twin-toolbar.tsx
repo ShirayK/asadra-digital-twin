@@ -9,13 +9,18 @@ interface TwinToolbarProps {
   showFlow: boolean;
   showSeparation: boolean;
   issueCount: number;
+  editMode: boolean;
   onToggleFlow: () => void;
   onToggleSeparation: () => void;
+  onToggleEdit: () => void;
+  onReset: () => void;
+  onExport: () => void;
+  onImport: () => void;
 }
 
 /**
- * Toolbar with toggles for flow arrows and separation-check overlay.
- * Separation toggle shows an issues count badge when issues exist.
+ * Toolbar with toggles for flow, separation check, and edit mode.
+ * Edit mode also exposes Reset, Export, and Import buttons.
  */
 export default function TwinToolbar({
   locale,
@@ -23,8 +28,13 @@ export default function TwinToolbar({
   showFlow,
   showSeparation,
   issueCount,
+  editMode,
   onToggleFlow,
   onToggleSeparation,
+  onToggleEdit,
+  onReset,
+  onExport,
+  onImport,
 }: TwinToolbarProps) {
   const t = getDictionary(locale);
 
@@ -44,20 +54,7 @@ export default function TwinToolbar({
       <button
         onClick={onToggleFlow}
         aria-pressed={showFlow}
-        style={{
-          padding: '0.3rem 0.9rem',
-          borderRadius: '4px',
-          border: '2px solid',
-          borderColor: showFlow ? '#3b82d4' : '#e5e7eb',
-          background: showFlow ? '#3b82d4' : '#f7f8fa',
-          color: showFlow ? '#fff' : '#1f2328',
-          fontWeight: 500,
-          fontSize: '0.875rem',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.35rem',
-        }}
+        style={toggleStyle(showFlow, '#3b82d4')}
       >
         <span style={{ fontSize: '1rem' }}>→</span>
         {t.twin.toggleFlow}
@@ -67,20 +64,7 @@ export default function TwinToolbar({
       <button
         onClick={onToggleSeparation}
         aria-pressed={showSeparation}
-        style={{
-          padding: '0.3rem 0.9rem',
-          borderRadius: '4px',
-          border: '2px solid',
-          borderColor: showSeparation ? '#ef4444' : '#e5e7eb',
-          background: showSeparation ? '#fef2f2' : '#f7f8fa',
-          color: showSeparation ? '#b91c1c' : '#1f2328',
-          fontWeight: 500,
-          fontSize: '0.875rem',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-        }}
+        style={toggleStyle(showSeparation, '#ef4444', '#fef2f2', '#b91c1c')}
       >
         {t.twin.toggleSeparation}
         {issueCount > 0 && (
@@ -105,6 +89,92 @@ export default function TwinToolbar({
           </span>
         )}
       </button>
+
+      {/* Separator */}
+      <span style={{ width: '1px', height: '1.5rem', background: '#e5e7eb', margin: '0 0.25rem' }} />
+
+      {/* Edit mode toggle */}
+      <button
+        onClick={onToggleEdit}
+        aria-pressed={editMode}
+        style={toggleStyle(editMode, '#7c5cd8')}
+      >
+        ✏ {t.twin.editMode}
+      </button>
+
+      {/* Edit mode action buttons */}
+      {editMode && (
+        <>
+          <button onClick={onReset} style={actionStyle('#f59e0b')}>
+            ↺ {t.common.reset}
+          </button>
+          <button onClick={onExport} style={actionStyle('#22c55e')}>
+            ↓ {t.common.export}
+          </button>
+          <label style={{ ...actionStyle('#3b82d4'), cursor: 'pointer' }}>
+            ↑ {t.common.import}
+            <input
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    onImport();
+                    // The actual content is handled by twin-view via onImport receiving the text
+                    // We dispatch a custom event to pass the file content
+                    const event = new CustomEvent('twin-import', { detail: ev.target?.result });
+                    window.dispatchEvent(event);
+                  };
+                  reader.readAsText(file);
+                }
+                // Reset input so same file can be reimported
+                e.target.value = '';
+              }}
+            />
+          </label>
+        </>
+      )}
     </div>
   );
+}
+
+function toggleStyle(
+  active: boolean,
+  activeColor: string,
+  activeBg?: string,
+  activeText?: string,
+): React.CSSProperties {
+  return {
+    padding: '0.3rem 0.9rem',
+    borderRadius: '4px',
+    border: '2px solid',
+    borderColor: active ? activeColor : '#e5e7eb',
+    background: active ? (activeBg ?? activeColor) : '#f7f8fa',
+    color: active ? (activeText ?? '#fff') : '#1f2328',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+  };
+}
+
+function actionStyle(color: string): React.CSSProperties {
+  return {
+    padding: '0.3rem 0.9rem',
+    borderRadius: '4px',
+    border: `2px solid ${color}`,
+    background: '#f7f8fa',
+    color: '#1f2328',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+  };
 }

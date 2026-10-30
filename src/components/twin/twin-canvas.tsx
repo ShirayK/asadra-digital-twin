@@ -18,13 +18,16 @@ interface TwinCanvasProps {
   dir?: 'ltr' | 'rtl';
   showFlow?: boolean;
   showSeparation?: boolean;
+  editMode?: boolean;
   onStationClick?: (station: StationDTO) => void;
+  onStationMove?: (id: string, x: number, z: number) => void;
 }
 
 /**
  * Main 3-D scene.
  * Loaded with dynamic({ ssr: false }) from twin-view.tsx.
- * Uses frameloop="demand" for performance — OrbitControls invalidates on interaction.
+ * frameloop="demand" for performance — OrbitControls invalidates on interaction.
+ * Edit mode allows dragging station markers.
  */
 export default function TwinCanvas({
   dto,
@@ -32,10 +35,10 @@ export default function TwinCanvas({
   dir = 'ltr',
   showFlow = true,
   showSeparation = true,
+  editMode = false,
   onStationClick,
+  onStationMove,
 }: TwinCanvasProps) {
-  const [, forceUpdate] = useState(0);
-
   const handleStationClick = useCallback(
     (station: StationDTO) => {
       onStationClick?.(station);
@@ -43,51 +46,69 @@ export default function TwinCanvas({
     [onStationClick],
   );
 
-  // Camera positioned to view the whole site
-  const camX = dto.siteWidth / 2;
-  const camZ = dto.siteDepth * 1.8;
-  const camY = Math.max(dto.siteWidth, dto.siteDepth) * 0.8;
+  const handleStationMove = useCallback(
+    (id: string, x: number, z: number) => {
+      onStationMove?.(id, x, z);
+    },
+    [onStationMove],
+  );
+
+  // Camera positioned to tightly frame the whole site
+  // Angle slightly from the front-left, filling the viewport
+  const cx = dto.siteWidth / 2;
+  const cz = dto.siteDepth / 2;
+  const camDist = Math.max(dto.siteWidth, dto.siteDepth) * 0.9;
+  const camY = camDist * 0.65;
+  const camZ = cz + camDist * 0.8;
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '600px' }}>
+    <div style={{ position: 'relative', width: '100%', height: '700px' }}>
       <Canvas
-        frameloop="demand"
+        frameloop={editMode ? 'always' : 'demand'}
         shadows
         camera={{
-          position: [camX, camY, camZ],
-          fov: 50,
+          position: [cx - dto.siteWidth * 0.15, camY, camZ],
+          fov: 45,
           near: 0.1,
           far: 500,
         }}
-        style={{ background: '#0f172a', borderRadius: '8px' }}
+        style={{ background: '#0b1220', borderRadius: '10px' }}
         gl={{ antialias: true }}
       >
-        {/* Soft ambient lighting */}
-        <ambientLight intensity={0.5} />
-        {/* Key directional light with shadows */}
+        {/* Hemisphere sky/ground ambient */}
+        <hemisphereLight args={['#b9d5ff', '#444422', 0.7]} />
+
+        {/* Key directional light with soft shadows */}
         <directionalLight
-          position={[dto.siteWidth * 0.5, 20, dto.siteDepth * 0.5]}
-          intensity={1.2}
+          position={[dto.siteWidth * 0.6, 25, dto.siteDepth * 0.7]}
+          intensity={1.5}
           castShadow
-          shadow-mapSize={[1024, 1024]}
-        />
-        {/* Fill light from opposite side */}
-        <directionalLight
-          position={[-dto.siteWidth * 0.3, 10, -dto.siteDepth * 0.3]}
-          intensity={0.4}
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-near={0.5}
+          shadow-camera-far={120}
+          shadow-camera-left={-dto.siteWidth}
+          shadow-camera-right={dto.siteWidth}
+          shadow-camera-top={dto.siteDepth}
+          shadow-camera-bottom={-dto.siteDepth}
         />
 
-        {/* Soft shadow helper */}
-        <SoftShadows samples={10} focus={0.5} />
+        {/* Fill light from opposite side */}
+        <directionalLight
+          position={[-dto.siteWidth * 0.4, 12, -dto.siteDepth * 0.4]}
+          intensity={0.5}
+        />
+
+        {/* Soft shadow helper (PCF) */}
+        <SoftShadows samples={16} focus={0.6} size={25} />
 
         {/* OrbitControls — invalidates canvas on interaction */}
         <OrbitControls
-          target={[dto.siteWidth / 2, 0, dto.siteDepth / 2]}
+          target={[cx, 0, cz]}
           enableDamping
-          dampingFactor={0.1}
-          minDistance={5}
-          maxDistance={80}
-          maxPolarAngle={Math.PI / 2.1}
+          dampingFactor={0.08}
+          minDistance={4}
+          maxDistance={100}
+          maxPolarAngle={Math.PI / 2.05}
         />
 
         {/* Factory floor */}
@@ -104,7 +125,9 @@ export default function TwinCanvas({
             key={station.id}
             station={station}
             locale={locale}
+            editMode={editMode}
             onClick={handleStationClick}
+            onMove={handleStationMove}
           />
         ))}
 
