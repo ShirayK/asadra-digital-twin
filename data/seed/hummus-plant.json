@@ -1,6 +1,9 @@
 {
   "schemaVersion": 1,
-  "source": { "kind": "seed", "exportedAt": "2026-10-30T12:00:00.000Z" },
+  "source": {
+    "kind": "seed",
+    "exportedAt": "2026-10-30T12:00:00.000Z"
+  },
   "site": {
     "id": "hummus-demo",
     "name": "מפעל חומוס — דמו",
@@ -8,76 +11,219 @@
     "depthM": 20
   },
   "allergens": [
-    { "code": "SESAME", "name": "שומשום" },
-    { "code": "GLUTEN", "name": "גלוטן" }
+    {
+      "code": "SESAME",
+      "name": "שומשום"
+    },
+    {
+      "code": "GLUTEN",
+      "name": "גלוטן"
+    }
   ],
   "zones": [
-    { "id": "z-receiving",  "name": "קבלה",          "hygieneClass": "RAW",       "x": 3,  "z": 4,  "width": 6,  "depth": 6,  "allergenCodes": [] },
-    { "id": "z-soaking",    "name": "השריה ובישול",   "hygieneClass": "LOW_RISK",  "x": 10, "z": 4,  "width": 6,  "depth": 6,  "allergenCodes": [] },
-    { "id": "z-tahini",     "name": "טחינה",           "hygieneClass": "LOW_RISK",  "x": 17, "z": 4,  "width": 6,  "depth": 6,  "allergenCodes": ["SESAME"] },
-    { "id": "z-highcare",   "name": "קירור ואזור נקי", "hygieneClass": "HIGH_CARE", "x": 10, "z": 14, "width": 10, "depth": 6,  "allergenCodes": [] },
-    { "id": "z-packaging",  "name": "אריזה",           "hygieneClass": "PACKAGING", "x": 22, "z": 14, "width": 6,  "depth": 6,  "allergenCodes": [] },
-    { "id": "z-storage",    "name": "מחסן קירור",      "hygieneClass": "STORAGE",   "x": 27, "z": 4,  "width": 4,  "depth": 6,  "allergenCodes": [] }
+    {
+      "id": "z-receiving",
+      "name": "קבלה",
+      "hygieneClass": "RAW",
+      "x": 3,
+      "z": 4,
+      "width": 6,
+      "depth": 6,
+      "allergenCodes": []
+    },
+    {
+      "id": "z-soaking",
+      "name": "השריה ובישול",
+      "hygieneClass": "LOW_RISK",
+      "x": 10,
+      "z": 4,
+      "width": 6,
+      "depth": 6,
+      "allergenCodes": []
+    },
+    {
+      "id": "z-tahini",
+      "name": "טחינה",
+      "hygieneClass": "LOW_RISK",
+      "x": 17,
+      "z": 4,
+      "width": 6,
+      "depth": 6,
+      "allergenCodes": [
+        "SESAME"
+      ]
+    },
+    {
+      "id": "z-highcare",
+      "name": "קירור ואזור נקי",
+      "hygieneClass": "HIGH_CARE",
+      "x": 10,
+      "z": 14,
+      "width": 10,
+      "depth": 6,
+      "allergenCodes": []
+    },
+    {
+      "id": "z-packaging",
+      "name": "אריזה",
+      "hygieneClass": "PACKAGING",
+      "x": 22,
+      "z": 14,
+      "width": 6,
+      "depth": 6,
+      "allergenCodes": []
+    },
+    {
+      "id": "z-storage",
+      "name": "מחסן קירור",
+      "hygieneClass": "STORAGE",
+      "x": 27,
+      "z": 4,
+      "width": 4,
+      "depth": 6,
+      "allergenCodes": []
+    }
   ],
   "stations": [
     {
       "id": "s-receiving-temp",
       "name": "מדד טמפרטורה — קבלה",
       "controlType": "PRP",
-      "position": { "x": 3, "z": 4 },
+      "position": {
+        "x": 3,
+        "z": 4
+      },
       "zoneId": "z-receiving",
       "fields": [
-        { "key": "temp", "label": "טמפרטורה", "unit": "°C", "max": 8, "monitoringFrequency": "כל משלוח", "correctiveActionText": "דחה משלוח אם > 8°C" }
+        {
+          "key": "temp",
+          "label": "טמפרטורה",
+          "unit": "°C",
+          "max": 8,
+          "monitoringFrequency": "כל משלוח",
+          "correctiveActionText": "דחה משלוח אם > 8°C"
+        }
       ]
     },
     {
       "id": "s-soaking",
       "name": "תחנת השריה",
       "controlType": "CP",
-      "position": { "x": 10, "z": 4 },
+      "position": {
+        "x": 10,
+        "z": 4
+      },
       "zoneId": "z-soaking",
       "fields": [
-        { "key": "duration_h", "label": "זמן השריה", "unit": "שעות", "min": 8, "max": 16, "monitoringFrequency": "כל אצווה" }
+        {
+          "key": "duration_h",
+          "label": "זמן השריה",
+          "unit": "שעות",
+          "min": 8,
+          "max": 16,
+          "monitoringFrequency": "כל אצווה"
+        }
       ]
     },
     {
       "id": "s-cooking",
       "name": "בישול (CCP)",
       "controlType": "CCP",
-      "position": { "x": 13, "z": 4 },
+      "position": {
+        "x": 13,
+        "z": 4
+      },
       "zoneId": "z-soaking",
       "fields": [
-        { "key": "temp", "label": "טמפרטורה", "unit": "°C", "min": 90, "monitoringFrequency": "רציף", "correctiveActionText": "הפסק בישול ובדוק ציוד אם < 90°C" }
+        {
+          "key": "temp",
+          "label": "טמפרטורה",
+          "unit": "°C",
+          "min": 90,
+          "monitoringFrequency": "רציף",
+          "correctiveActionText": "הפסק בישול ובדוק ציוד אם < 90°C"
+        }
+      ]
+    },
+    {
+      "id": "s-tahini-mix",
+      "name": "ערבול טחינה",
+      "controlType": "CP",
+      "position": {
+        "x": 17,
+        "z": 4
+      },
+      "zoneId": "z-tahini",
+      "fields": [
+        {
+          "key": "temp",
+          "label": "טמפרטורה",
+          "unit": "°C",
+          "max": 30,
+          "monitoringFrequency": "כל אצווה",
+          "correctiveActionText": "קרר אם > 30°C"
+        }
       ]
     },
     {
       "id": "s-cooling",
       "name": "קירור (CCP)",
       "controlType": "CCP",
-      "position": { "x": 10, "z": 14 },
+      "position": {
+        "x": 10,
+        "z": 14
+      },
       "zoneId": "z-highcare",
       "fields": [
-        { "key": "temp", "label": "טמפרטורה", "unit": "°C", "max": 5, "monitoringFrequency": "כל שעה", "correctiveActionText": "הכנס לקירור מהיר אם > 5°C" }
+        {
+          "key": "temp",
+          "label": "טמפרטורה",
+          "unit": "°C",
+          "max": 5,
+          "monitoringFrequency": "כל שעה",
+          "correctiveActionText": "הכנס לקירור מהיר אם > 5°C"
+        }
       ]
     },
     {
       "id": "s-metal-detector",
       "name": "גלאי מתכות (CCP)",
       "controlType": "CCP",
-      "position": { "x": 20, "z": 14 },
+      "position": {
+        "x": 20,
+        "z": 14
+      },
       "zoneId": "z-packaging",
       "fields": [
-        { "key": "test_passed", "label": "עבר בדיקה", "unit": "", "min": 1, "max": 1, "monitoringFrequency": "כל אצווה", "correctiveActionText": "בידוד אצווה ובדיקה חוזרת" }
+        {
+          "key": "test_passed",
+          "label": "עבר בדיקה",
+          "unit": "",
+          "min": 1,
+          "max": 1,
+          "monitoringFrequency": "כל אצווה",
+          "correctiveActionText": "בידוד אצווה ובדיקה חוזרת"
+        }
       ]
     },
     {
       "id": "s-packaging",
       "name": "אריזה",
       "controlType": "PRP",
-      "position": { "x": 22, "z": 14 },
+      "position": {
+        "x": 22,
+        "z": 14
+      },
       "zoneId": "z-packaging",
       "fields": [
-        { "key": "seal_ok", "label": "איטום תקין", "unit": "", "min": 1, "max": 1, "monitoringFrequency": "כל אצווה" }
+        {
+          "key": "seal_ok",
+          "label": "איטום תקין",
+          "unit": "",
+          "min": 1,
+          "max": 1,
+          "monitoringFrequency": "כל אצווה"
+        }
       ]
     }
   ],
@@ -85,60 +231,299 @@
     "id": "proc-hummus",
     "name": "תהליך ייצור חומוס",
     "steps": [
-      { "id": "step-receive",  "name": "קבלת חומרי גלם",  "type": "MATERIAL_INPUT",  "sortOrder": 1, "stationId": "s-receiving-temp" },
-      { "id": "step-soak",     "name": "השריה",            "type": "CP",              "sortOrder": 2, "stationId": "s-soaking" },
-      { "id": "step-cook",     "name": "בישול",            "type": "CCP",             "sortOrder": 3, "stationId": "s-cooking" },
-      { "id": "step-cool",     "name": "קירור",            "type": "CCP",             "sortOrder": 4, "stationId": "s-cooling" },
-      { "id": "step-detect",   "name": "גלאי מתכות",       "type": "CCP",             "sortOrder": 5, "stationId": "s-metal-detector" },
-      { "id": "step-pack",     "name": "אריזה",            "type": "PACKAGING",       "sortOrder": 6, "stationId": "s-packaging" },
-      { "id": "step-output",   "name": "מוצר מוגמר",       "type": "OUTPUT",          "sortOrder": 7, "position": { "x": 27, "z": 14 } }
+      {
+        "id": "step-receive",
+        "name": "קבלת חומרי גלם",
+        "type": "MATERIAL_INPUT",
+        "sortOrder": 1,
+        "stationId": "s-receiving-temp"
+      },
+      {
+        "id": "step-soak",
+        "name": "השריה",
+        "type": "CP",
+        "sortOrder": 2,
+        "stationId": "s-soaking"
+      },
+      {
+        "id": "step-cook",
+        "name": "בישול",
+        "type": "CCP",
+        "sortOrder": 3,
+        "stationId": "s-cooking"
+      },
+      {
+        "id": "step-tahini",
+        "name": "ערבול טחינה",
+        "type": "CP",
+        "sortOrder": 4,
+        "stationId": "s-tahini-mix"
+      },
+      {
+        "id": "step-cool",
+        "name": "קירור",
+        "type": "CCP",
+        "sortOrder": 5,
+        "stationId": "s-cooling"
+      },
+      {
+        "id": "step-detect",
+        "name": "גלאי מתכות",
+        "type": "CCP",
+        "sortOrder": 6,
+        "stationId": "s-metal-detector"
+      },
+      {
+        "id": "step-pack",
+        "name": "אריזה",
+        "type": "PACKAGING",
+        "sortOrder": 7,
+        "stationId": "s-packaging"
+      },
+      {
+        "id": "step-output",
+        "name": "מוצר מוגמר",
+        "type": "OUTPUT",
+        "sortOrder": 8,
+        "position": {
+          "x": 27,
+          "z": 14
+        }
+      }
     ],
     "edges": [
-      { "from": "step-receive", "to": "step-soak" },
-      { "from": "step-soak",    "to": "step-cook" },
-      { "from": "step-cook",    "to": "step-cool",   "label": "RAW→HIGH_CARE without CCP (intentional demo)" },
-      { "from": "step-cool",    "to": "step-detect" },
-      { "from": "step-detect",  "to": "step-pack" },
-      { "from": "step-pack",    "to": "step-output" }
+      {
+        "from": "step-receive",
+        "to": "step-soak"
+      },
+      {
+        "from": "step-soak",
+        "to": "step-cook"
+      },
+      {
+        "from": "step-cook",
+        "to": "step-cool"
+      },
+      {
+        "from": "step-tahini",
+        "to": "step-cool",
+        "label": "DEMO: LOW_RISK+SESAME(CP) → HIGH_CARE — fires both separation checks"
+      },
+      {
+        "from": "step-cool",
+        "to": "step-detect"
+      },
+      {
+        "from": "step-detect",
+        "to": "step-pack"
+      },
+      {
+        "from": "step-pack",
+        "to": "step-output"
+      }
     ]
   },
   "readings": [
     {
-      "id": "r-001", "stationId": "s-receiving-temp", "recordedAt": "2026-10-30T08:00:00.000Z",
-      "values": { "temp": 4 },
-      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0001",
-      "prevHash": "0000000000000000000000000000000000000000000000000000000000000000"
+      "id": "r-001",
+      "stationId": "s-receiving-temp",
+      "recordedAt": "2026-10-29T12:00:00.000Z",
+      "values": {
+        "temp": 3
+      },
+      "prevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "dc5a654592ac7907237a2d66bab1ce91d58a349ed460bafbb92c51cc5bbf578a"
     },
     {
-      "id": "r-002", "stationId": "s-soaking", "recordedAt": "2026-10-30T08:30:00.000Z",
-      "values": { "duration_h": 12 },
-      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0002",
-      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0001"
+      "id": "r-002",
+      "stationId": "s-soaking",
+      "recordedAt": "2026-10-29T12:30:00.000Z",
+      "values": {
+        "duration_h": 10
+      },
+      "prevHash": "dc5a654592ac7907237a2d66bab1ce91d58a349ed460bafbb92c51cc5bbf578a",
+      "hash": "585428f4a40938574d908df7c3744bcc4f218bde4f67f39d3e0b3785af90b185"
     },
     {
-      "id": "r-003", "stationId": "s-cooking", "recordedAt": "2026-10-30T09:00:00.000Z",
-      "values": { "temp": 95 },
-      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0003",
-      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0002"
+      "id": "r-003",
+      "stationId": "s-cooking",
+      "recordedAt": "2026-10-29T13:00:00.000Z",
+      "values": {
+        "temp": 93
+      },
+      "prevHash": "585428f4a40938574d908df7c3744bcc4f218bde4f67f39d3e0b3785af90b185",
+      "hash": "d6f91739a7334725ae1cd7c3d2393127cbf955e57bbfcdd4bd69f8efee7f03bf"
     },
     {
-      "id": "r-004", "stationId": "s-cooling", "recordedAt": "2026-10-30T10:00:00.000Z",
-      "values": { "temp": 9 },
+      "id": "r-004",
+      "stationId": "s-tahini-mix",
+      "recordedAt": "2026-10-29T13:15:00.000Z",
+      "values": {
+        "temp": 22
+      },
+      "prevHash": "d6f91739a7334725ae1cd7c3d2393127cbf955e57bbfcdd4bd69f8efee7f03bf",
+      "hash": "8123c709f3b69578652f3d12fa9a28feee2a3877b1aec05423b8fd526adf10b3"
+    },
+    {
+      "id": "r-005",
+      "stationId": "s-cooling",
+      "recordedAt": "2026-10-29T14:00:00.000Z",
+      "values": {
+        "temp": 4
+      },
+      "prevHash": "8123c709f3b69578652f3d12fa9a28feee2a3877b1aec05423b8fd526adf10b3",
+      "hash": "1a7f779498b52471b6beb1f698017203f87aa00e5b3157060c65da1fa10a9b8e"
+    },
+    {
+      "id": "r-006",
+      "stationId": "s-metal-detector",
+      "recordedAt": "2026-10-29T15:00:00.000Z",
+      "values": {
+        "test_passed": 1
+      },
+      "prevHash": "1a7f779498b52471b6beb1f698017203f87aa00e5b3157060c65da1fa10a9b8e",
+      "hash": "0724ad56144ebdac324e8f57bf482ec1bc58bd386319b0e2062742fb65727729"
+    },
+    {
+      "id": "r-007",
+      "stationId": "s-packaging",
+      "recordedAt": "2026-10-29T15:30:00.000Z",
+      "values": {
+        "seal_ok": 1
+      },
+      "prevHash": "0724ad56144ebdac324e8f57bf482ec1bc58bd386319b0e2062742fb65727729",
+      "hash": "35f7928b09fdc5b35bf69153e1dfc294eaffd6e06407b1ff63801cb149c814e1"
+    },
+    {
+      "id": "r-008",
+      "stationId": "s-receiving-temp",
+      "recordedAt": "2026-10-29T18:00:00.000Z",
+      "values": {
+        "temp": 5
+      },
+      "prevHash": "35f7928b09fdc5b35bf69153e1dfc294eaffd6e06407b1ff63801cb149c814e1",
+      "hash": "ff561716733418c30f500e6858c47ad6da379e33e89048804056f996b891baeb"
+    },
+    {
+      "id": "r-009",
+      "stationId": "s-cooking",
+      "recordedAt": "2026-10-29T19:00:00.000Z",
+      "values": {
+        "temp": 91
+      },
+      "prevHash": "ff561716733418c30f500e6858c47ad6da379e33e89048804056f996b891baeb",
+      "hash": "55d684788d330e1c43abd36afbee1d1f1ea523b544adaa6d0e8b5b4aa5264bf4"
+    },
+    {
+      "id": "r-010",
+      "stationId": "s-cooling",
+      "recordedAt": "2026-10-29T20:00:00.000Z",
+      "values": {
+        "temp": 4
+      },
+      "prevHash": "55d684788d330e1c43abd36afbee1d1f1ea523b544adaa6d0e8b5b4aa5264bf4",
+      "hash": "f8d2bdd9df769e0bd739e8597f7030549a64db5560f192552697bd956a48dcc8"
+    },
+    {
+      "id": "r-011",
+      "stationId": "s-metal-detector",
+      "recordedAt": "2026-10-29T21:00:00.000Z",
+      "values": {
+        "test_passed": 1
+      },
+      "prevHash": "f8d2bdd9df769e0bd739e8597f7030549a64db5560f192552697bd956a48dcc8",
+      "hash": "75963babd7a68abcc8d503b4450ff086d725fe8dee1f2bbd57539c4bef4c2e2c"
+    },
+    {
+      "id": "r-012",
+      "stationId": "s-receiving-temp",
+      "recordedAt": "2026-10-30T06:00:00.000Z",
+      "values": {
+        "temp": 4
+      },
+      "prevHash": "75963babd7a68abcc8d503b4450ff086d725fe8dee1f2bbd57539c4bef4c2e2c",
+      "hash": "4ac08031c9887943159fba7aa17e59662010956b904b68b6542ee32a5198f8e7"
+    },
+    {
+      "id": "r-013",
+      "stationId": "s-soaking",
+      "recordedAt": "2026-10-30T06:30:00.000Z",
+      "values": {
+        "duration_h": 12
+      },
+      "prevHash": "4ac08031c9887943159fba7aa17e59662010956b904b68b6542ee32a5198f8e7",
+      "hash": "9377838a61a50fbbce0e7ba035f111dbc7b92af8c8832d2bab85bc02577f7196"
+    },
+    {
+      "id": "r-014",
+      "stationId": "s-cooking",
+      "recordedAt": "2026-10-30T07:00:00.000Z",
+      "values": {
+        "temp": 96
+      },
+      "prevHash": "9377838a61a50fbbce0e7ba035f111dbc7b92af8c8832d2bab85bc02577f7196",
+      "hash": "0052c86a5a22b140f13ea5fa7d5e83f409f0632433183ede308a673d7ef58c0e"
+    },
+    {
+      "id": "r-015",
+      "stationId": "s-tahini-mix",
+      "recordedAt": "2026-10-30T07:15:00.000Z",
+      "values": {
+        "temp": 21
+      },
+      "prevHash": "0052c86a5a22b140f13ea5fa7d5e83f409f0632433183ede308a673d7ef58c0e",
+      "hash": "5dfa6e4cb16bdff45ea7bab51f04c159ab5fd75c4778b5c6d4090485bf7f2d76"
+    },
+    {
+      "id": "r-016",
+      "stationId": "s-cooling",
+      "recordedAt": "2026-10-30T08:00:00.000Z",
+      "values": {
+        "temp": 9
+      },
       "correctiveAction": "הכנס לקירור מהיר — נמדד 9°C מול גבול 5°C",
-      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0004",
-      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0003"
+      "prevHash": "5dfa6e4cb16bdff45ea7bab51f04c159ab5fd75c4778b5c6d4090485bf7f2d76",
+      "hash": "d65eebd8f4b0b45b2a277f8a41a40091939a17b352f3d3c154d4cb6e8ac342b6"
     },
     {
-      "id": "r-005", "stationId": "s-metal-detector", "recordedAt": "2026-10-30T10:30:00.000Z",
-      "values": { "test_passed": 1 },
-      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0005",
-      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0004"
+      "id": "r-017",
+      "stationId": "s-cooling",
+      "recordedAt": "2026-10-30T09:00:00.000Z",
+      "values": {
+        "temp": 3
+      },
+      "prevHash": "d65eebd8f4b0b45b2a277f8a41a40091939a17b352f3d3c154d4cb6e8ac342b6",
+      "hash": "8f2fc4f5c7ba5ab4c905ae429901a436b1e8eef3ca1631c3a92141db150d99dc"
     },
     {
-      "id": "r-006", "stationId": "s-packaging", "recordedAt": "2026-10-30T11:00:00.000Z",
-      "values": { "seal_ok": 1 },
-      "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0006",
-      "prevHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0005"
+      "id": "r-018",
+      "stationId": "s-metal-detector",
+      "recordedAt": "2026-10-30T09:30:00.000Z",
+      "values": {
+        "test_passed": 1
+      },
+      "prevHash": "8f2fc4f5c7ba5ab4c905ae429901a436b1e8eef3ca1631c3a92141db150d99dc",
+      "hash": "532d639a495dd6a9f176323da0903571a83ccf1c1eeb12fb79cd803541a1ccfe"
+    },
+    {
+      "id": "r-019",
+      "stationId": "s-packaging",
+      "recordedAt": "2026-10-30T10:00:00.000Z",
+      "values": {
+        "seal_ok": 1
+      },
+      "prevHash": "532d639a495dd6a9f176323da0903571a83ccf1c1eeb12fb79cd803541a1ccfe",
+      "hash": "c131c1dc8aa2707569703112386d61fe4a75fa620abb8cf883a51d2c7784c160"
+    },
+    {
+      "id": "r-020",
+      "stationId": "s-receiving-temp",
+      "recordedAt": "2026-10-30T11:00:00.000Z",
+      "values": {
+        "temp": 6
+      },
+      "prevHash": "c131c1dc8aa2707569703112386d61fe4a75fa620abb8cf883a51d2c7784c160",
+      "hash": "ab4e95c6fa57b9b11a3fe6a273acbe27c0d3c81422c36c75254a1d08fe0fdeae"
     }
   ]
 }
