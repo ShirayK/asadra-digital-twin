@@ -6,6 +6,7 @@ import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
 import SidePanel from './side-panel';
+import TwinToolbar from './twin-toolbar';
 
 // Load the 3-D canvas only on the client (no SSR) — Prompt 5 implementation
 const TwinCanvas = dynamic(() => import('./twin-canvas'), { ssr: false });
@@ -17,13 +18,15 @@ interface TwinViewProps {
 
 /**
  * Client component that receives the precomputed DTO from the server and
- * orchestrates the twin UI: status summary, 3-D canvas, and issues list.
+ * orchestrates the twin UI: status summary, toolbar, 3-D canvas, and issues list.
  */
 export default function TwinView({ dto, locale }: TwinViewProps) {
   const t = getDictionary(locale);
   const dir = locale === 'he' ? 'rtl' : 'ltr';
 
   const [selectedStation, setSelectedStation] = useState<StationDTO | null>(null);
+  const [showFlow, setShowFlow] = useState(true);
+  const [showSeparation, setShowSeparation] = useState(true);
 
   const handleStationClick = useCallback((station: StationDTO) => {
     setSelectedStation((prev) => (prev?.id === station.id ? null : station));
@@ -41,6 +44,17 @@ export default function TwinView({ dto, locale }: TwinViewProps) {
       onClose={() => setSelectedStation(null)}
     />
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* ── Toolbar (Prompt 7) ─────────────────────────────────────────── */}
+      <TwinToolbar
+        locale={locale}
+        dir={dir}
+        showFlow={showFlow}
+        showSeparation={showSeparation}
+        issueCount={issueCount}
+        onToggleFlow={() => setShowFlow((v) => !v)}
+        onToggleSeparation={() => setShowSeparation((v) => !v)}
+      />
+
       {/* ── Status summary bar ─────────────────────────────────────────── */}
       <div
         style={{
@@ -76,6 +90,8 @@ export default function TwinView({ dto, locale }: TwinViewProps) {
         dto={dto}
         locale={locale}
         dir={dir}
+        showFlow={showFlow}
+        showSeparation={showSeparation}
         onStationClick={handleStationClick}
       />
 

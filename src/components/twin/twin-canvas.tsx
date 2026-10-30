@@ -8,12 +8,16 @@ import type { Locale } from '@/i18n';
 import FactoryFloor from './factory-floor';
 import ZoneMesh from './zone-mesh';
 import StationMarker from './station-marker';
+import FlowArrows from './flow-arrows';
+import SeparationOverlay from './separation-overlay';
 import Legend from './legend';
 
 interface TwinCanvasProps {
   dto: TwinDTO;
   locale: Locale;
   dir?: 'ltr' | 'rtl';
+  showFlow?: boolean;
+  showSeparation?: boolean;
   onStationClick?: (station: StationDTO) => void;
 }
 
@@ -26,6 +30,8 @@ export default function TwinCanvas({
   dto,
   locale,
   dir = 'ltr',
+  showFlow = true,
+  showSeparation = true,
   onStationClick,
 }: TwinCanvasProps) {
   const [, forceUpdate] = useState(0);
@@ -101,6 +107,18 @@ export default function TwinCanvas({
             onClick={handleStationClick}
           />
         ))}
+
+        {/* Flow arrows (Prompt 7) */}
+        {showFlow && <FlowArrows segments={dto.flowSegments} />}
+
+        {/* Separation overlay (Prompt 7) */}
+        {showSeparation && (
+          <SeparationOverlay
+            issues={dto.separationIssues}
+            flowSegments={dto.flowSegments}
+            locale={locale}
+          />
+        )}
       </Canvas>
 
       {/* Legend overlay */}
