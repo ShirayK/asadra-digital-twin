@@ -33,7 +33,8 @@
     "chainInvalid": "שרשרת hash לא תקינה",
     "flowSegments": "מקטעי זרימה",
     "editModeBanner": "מצב עריכה: גרור תחנות על הרצפה לשינוי מיקומן. השינויים נשמרים אוטומטית.",
-    "importError": "שגיאת ייבוא"
+    "importError": "שגיאת ייבוא",
+    "emptyState": "לא נטענו נתונים. ייבא קובץ JSON או הוסף קובץ seed."
   },
   "status": {
     "OK": "תקין",

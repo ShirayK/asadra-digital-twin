@@ -1,7 +1,11 @@
 # Asadra Integration Adapter — Future Design
 
-> **Status: Documentation only.** No code in this repo currently calls Asadra.  
+> **Status: Documentation only.** No code in this repo currently calls Asadra.
 > This document describes the planned `AsadraApiSource` for post-MVP integration.
+>
+> **Verified (Prompt 11 QA):** `git grep -r "supabase\|ShirayK/Asadra"` finds no references
+> in `src/` or `tests/` — only in this documentation file and `docs/SPEC.md`.
+> Zero `.env` files tracked in git. All checks pass: `tsc --noEmit`, `vitest run`, `next build`.
 
 ## Overview
 

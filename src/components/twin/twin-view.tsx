@@ -402,6 +402,24 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           ))}
         </div>
 
+        {/* ── Empty state ────────────────────────────────────────────────── */}
+        {liveDto.stations.length === 0 && liveDto.zones.length === 0 && (
+          <div
+            data-testid="empty-state"
+            style={{
+              padding: '2rem',
+              textAlign: 'center',
+              color: '#57606a',
+              fontSize: '1rem',
+              border: '1px dashed #e5e7eb',
+              borderRadius: '8px',
+              direction: dir,
+            }}
+          >
+            {t.twin.emptyState}
+          </div>
+        )}
+
         {/* ── 3-D Canvas + guided tour overlay ──────────────────────────── */}
         <div style={{ position: 'relative' }}>
           <TwinCanvas
