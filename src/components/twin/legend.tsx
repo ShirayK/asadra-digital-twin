@@ -59,7 +59,7 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
     >
       {/* Hygiene classes */}
       <div style={{ fontWeight: 700, fontSize: 10, opacity: 0.7, marginBottom: 2 }}>
-        {dir === 'rtl' ? 'אזור היגייני' : 'Hygiene zone'}
+        {t.legend.hygieneZone}
       </div>
       {Object.entries(HYGIENE_COLORS).map(([key, color]) => (
         <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -82,7 +82,7 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
 
       {/* Station statuses */}
       <div style={{ fontWeight: 700, fontSize: 10, opacity: 0.7, marginBottom: 2 }}>
-        {dir === 'rtl' ? 'סטטוס תחנה' : 'Station status'}
+        {t.legend.stationStatus}
       </div>
       {Object.entries(STATUS_COLORS).map(([key, color]) => (
         <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

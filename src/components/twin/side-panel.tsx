@@ -241,7 +241,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
         {/* ── Hash / chain verification ──────────────────────────────────────────── */}
         {latestReading?.hash && (
           <section>
-            <SectionTitle>Hash</SectionTitle>
+            <SectionTitle>{t.panel.hash}</SectionTitle>
             <div
               style={{
                 display: 'flex',

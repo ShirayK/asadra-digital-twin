@@ -30,7 +30,10 @@
     "noIssues": "לא נמצאו בעיות",
     "noData": "אין נתונים",
     "chainVerified": "שרשרת hash מאומתת",
-    "chainInvalid": "שרשרת hash לא תקינה"
+    "chainInvalid": "שרשרת hash לא תקינה",
+    "flowSegments": "מקטעי זרימה",
+    "editModeBanner": "מצב עריכה: גרור תחנות על הרצפה לשינוי מיקומן. השינויים נשמרים אוטומטית.",
+    "importError": "שגיאת ייבוא"
   },
   "status": {
     "OK": "תקין",
@@ -62,7 +65,12 @@
     "recordedAt": "נרשם ב",
     "noReadings": "אין מדידות",
     "min": "מינ׳",
-    "max": "מקס׳"
+    "max": "מקס׳",
+    "hash": "חתימה דיגיטלית"
+  },
+  "legend": {
+    "hygieneZone": "אזור היגייני",
+    "stationStatus": "סטטוס תחנה"
   },
   "tour": {
     "next": "הבא",

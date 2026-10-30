@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
-import { getDictionary } from '@/i18n';
+import { getDictionary, locales } from '@/i18n';
 import { loadOverlay, saveOverlay, clearOverlay } from '@/adapters/local-overlay';
 import type { LayoutOverlay } from '@/adapters/local-overlay';
 import { TwinDatasetSchema } from '@/domain/schema';
@@ -307,6 +308,34 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               🎓 {t.tour.exit}
             </button>
           )}
+
+          {/* Separator */}
+          <span style={{ width: '1px', height: '1.5rem', background: '#e5e7eb' }} />
+
+          {/* Language switcher (Prompt 10) */}
+          <div
+            style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', fontSize: '0.8rem' }}
+            aria-label={t.nav.language}
+          >
+            {locales.map((l) => (
+              <Link
+                key={l}
+                href={`/${l}/twin`}
+                style={{
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '4px',
+                  border: '1px solid',
+                  borderColor: l === locale ? 'var(--color-accent, #3b82d4)' : '#e5e7eb',
+                  background: l === locale ? 'var(--color-accent, #3b82d4)' : '#f7f8fa',
+                  color: l === locale ? '#fff' : '#1f2328',
+                  fontWeight: l === locale ? 700 : 400,
+                  textDecoration: 'none',
+                }}
+              >
+                {l === 'he' ? 'עב' : 'EN'}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Edit mode banner */}
@@ -322,9 +351,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               direction: dir,
             }}
           >
-            {locale === 'he'
-              ? 'מצב עריכה: גרור תחנות על הרצפה לשינוי מיקומן. השינויים נשמרים אוטומטית.'
-              : 'Edit mode: drag station markers on the floor to reposition them. Changes are saved automatically.'}
+            {t.twin.editModeBanner}
           </div>
         )}
 
@@ -341,7 +368,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               direction: dir,
             }}
           >
-            {locale === 'he' ? `שגיאת ייבוא: ${importError}` : `Import error: ${importError}`}
+            {t.twin.importError}: {importError}
           </div>
         )}
 
@@ -431,7 +458,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
 
           {/* Flow segment count */}
           <span style={{ color: '#57606a' }}>
-            {liveDto.flowSegments.length} flow segments
+            {liveDto.flowSegments.length} {t.twin.flowSegments}
           </span>
 
           {/* Chain verification */}

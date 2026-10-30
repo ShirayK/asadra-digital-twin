@@ -30,7 +30,10 @@
     "noIssues": "No issues found",
     "noData": "No data",
     "chainVerified": "Hash chain verified",
-    "chainInvalid": "Hash chain invalid"
+    "chainInvalid": "Hash chain invalid",
+    "flowSegments": "flow segments",
+    "editModeBanner": "Edit mode: drag station markers on the floor to reposition them. Changes are saved automatically.",
+    "importError": "Import error"
   },
   "status": {
     "OK": "OK",
@@ -62,7 +65,12 @@
     "recordedAt": "Recorded at",
     "noReadings": "No readings",
     "min": "Min",
-    "max": "Max"
+    "max": "Max",
+    "hash": "Digital signature"
+  },
+  "legend": {
+    "hygieneZone": "Hygiene zone",
+    "stationStatus": "Station status"
   },
   "tour": {
     "next": "Next",
