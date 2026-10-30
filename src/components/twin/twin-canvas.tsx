@@ -11,6 +11,7 @@ import StationMarker from './station-marker';
 import FlowArrows from './flow-arrows';
 import SeparationOverlay from './separation-overlay';
 import Legend from './legend';
+import { GuidedTourCamera } from './guided-tour';
 
 interface TwinCanvasProps {
   dto: TwinDTO;
@@ -19,6 +20,8 @@ interface TwinCanvasProps {
   showFlow?: boolean;
   showSeparation?: boolean;
   editMode?: boolean;
+  /** When true, the GuidedTourCamera lerp is active (frameloop switches to "always") */
+  tourActive?: boolean;
   onStationClick?: (station: StationDTO) => void;
   onStationMove?: (id: string, x: number, z: number) => void;
 }
@@ -36,6 +39,7 @@ export default function TwinCanvas({
   showFlow = true,
   showSeparation = true,
   editMode = false,
+  tourActive = false,
   onStationClick,
   onStationMove,
 }: TwinCanvasProps) {
@@ -64,7 +68,7 @@ export default function TwinCanvas({
   return (
     <div style={{ position: 'relative', width: '100%', height: '700px' }}>
       <Canvas
-        frameloop={editMode ? 'always' : 'demand'}
+        frameloop={editMode || tourActive ? 'always' : 'demand'}
         shadows
         camera={{
           position: [cx - dto.siteWidth * 0.15, camY, camZ],
@@ -100,6 +104,9 @@ export default function TwinCanvas({
 
         {/* Soft shadow helper (PCF) */}
         <SoftShadows samples={16} focus={0.6} size={25} />
+
+        {/* Guided tour camera lerp (Prompt 9) */}
+        {tourActive && <GuidedTourCamera />}
 
         {/* OrbitControls — invalidates canvas on interaction */}
         <OrbitControls

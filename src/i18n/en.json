@@ -68,6 +68,20 @@
     "next": "Next",
     "prev": "Previous",
     "exit": "Exit tour",
-    "stepOf": "Step {current} of {total}"
+    "stepOf": "Step {current} of {total}",
+    "start": "Guided tour",
+    "whyMatters": "Why it matters",
+    "limits": "Control limits",
+    "monitoringFrequency": "Monitoring frequency",
+    "correctiveAction": "Corrective action",
+    "stepTypes": {
+      "MATERIAL_INPUT": "Material input — entry point of raw materials into the process.",
+      "PROCESS_ACTION": "Process action — an internal processing step.",
+      "CCP": "Critical Control Point — failure to stay within limits can compromise product safety.",
+      "CP": "Control Point — an important control that is not critical to immediate safety.",
+      "PRP": "Pre-requisite Programme — basic operational and environmental conditions.",
+      "PACKAGING": "Packaging — preserving product integrity before distribution.",
+      "OUTPUT": "Output — finished product exits the process."
+    }
   }
 }

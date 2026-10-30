@@ -3,7 +3,7 @@ import { getStationStatus, type StationStatus } from '@/domain/status';
 import { buildFlowPaths, type FlowSegment } from '@/domain/flow';
 import { findSeparationIssues, type SeparationIssue } from '@/domain/separation';
 import { verifyReadingChain, type ChainVerificationResult } from '@/domain/chain';
-import type { Reading, Station, Zone } from '@/domain/schema';
+import type { Reading, Station, Zone, ProcessStep, StationField } from '@/domain/schema';
 import { getDictionary, locales, defaultLocale, type Locale } from '@/i18n';
 import TwinView from '@/components/twin/twin-view';
 
@@ -22,6 +22,20 @@ export interface StationDTO {
   lastReadings: Reading[];
 }
 
+/** A process step enriched with the linked station's fields for the guided tour. */
+export interface TourStep {
+  id: string;
+  name: string;
+  type: ProcessStep['type'];
+  sortOrder: number;
+  /** Camera focus position resolved from the linked station or step.position */
+  position: { x: number; z: number };
+  /** Station fields (limits, monitoring, corrective action) — present when a station is linked */
+  fields: StationField[];
+  /** controlType of the linked station, if any */
+  controlType?: Station['controlType'];
+}
+
 export interface TwinDTO {
   siteName: string;
   siteWidth: number;
@@ -31,6 +45,8 @@ export interface TwinDTO {
   flowSegments: FlowSegment[];
   separationIssues: SeparationIssue[];
   chainResult: ChainVerificationResult;
+  /** Process steps in sortOrder, enriched for the guided tour (Prompt 9) */
+  tourSteps: TourStep[];
 }
 
 export default async function TwinPage({ params }: { params: { locale: string } }) {
@@ -88,6 +104,27 @@ export default async function TwinPage({ params }: { params: { locale: string } 
   // ── Chain verification (async, uses Web Crypto) ───────────────────────────
   const chainResult = await verifyReadingChain(dataset.readings);
 
+  // ── Build guided tour steps ────────────────────────────────────────────────
+  const stationMap = new Map(dataset.stations.map((s) => [s.id, s]));
+  const tourSteps: TourStep[] = dataset.process.steps
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((step) => {
+      const station = step.stationId ? stationMap.get(step.stationId) : undefined;
+      const position = station
+        ? { x: station.position.x, z: station.position.z }
+        : (step.position ?? { x: dataset.site.widthM / 2, z: dataset.site.depthM / 2 });
+      return {
+        id: step.id,
+        name: step.name,
+        type: step.type,
+        sortOrder: step.sortOrder,
+        position,
+        fields: station?.fields ?? [],
+        controlType: station?.controlType,
+      };
+    });
+
   const dto: TwinDTO = {
     siteName: dataset.site.name,
     siteWidth: dataset.site.widthM,
@@ -97,6 +134,7 @@ export default async function TwinPage({ params }: { params: { locale: string } 
     flowSegments,
     separationIssues,
     chainResult,
+    tourSteps,
   };
 
   return (

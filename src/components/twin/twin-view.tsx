@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
-import { mergeOverlay, loadOverlay, saveOverlay, clearOverlay } from '@/adapters/local-overlay';
+import { loadOverlay, saveOverlay, clearOverlay } from '@/adapters/local-overlay';
 import type { LayoutOverlay } from '@/adapters/local-overlay';
 import { TwinDatasetSchema } from '@/domain/schema';
 import { getStationStatus } from '@/domain/status';
@@ -13,6 +13,7 @@ import { buildFlowPaths } from '@/domain/flow';
 import { findSeparationIssues } from '@/domain/separation';
 import SidePanel from './side-panel';
 import TwinToolbar from './twin-toolbar';
+import GuidedTourCard, { setTourTarget } from './guided-tour';
 
 // Load the 3-D canvas only on the client (no SSR) — Prompt 5 implementation
 const TwinCanvas = dynamic(() => import('./twin-canvas'), { ssr: false });
@@ -37,8 +38,21 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   const [editMode, setEditMode] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // Guided tour state (Prompt 9)
+  const [tourActive, setTourActive] = useState(false);
+  const [tourIndex, setTourIndex] = useState(0);
+
   // Live DTO that may be updated by overlay or import
   const [liveDto, setLiveDto] = useState<TwinDTO>(baseDto);
+
+  // Keep camera lerp target in sync with the active tour step
+  useEffect(() => {
+    if (tourActive && liveDto.tourSteps.length > 0) {
+      setTourTarget(liveDto.tourSteps[tourIndex]?.position ?? null);
+    } else {
+      setTourTarget(null);
+    }
+  }, [tourActive, tourIndex, liveDto.tourSteps]);
 
   // Load saved overlay on mount and apply it
   useEffect(() => {
@@ -87,6 +101,26 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             lastReadings: readings.slice(0, 5),
           };
         });
+        // Rebuild tour steps from the imported dataset
+        const importedStationMap = new Map(dataset.stations.map((s) => [s.id, s]));
+        const importedTourSteps = dataset.process.steps
+          .slice()
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((step) => {
+            const st = step.stationId ? importedStationMap.get(step.stationId) : undefined;
+            const pos = st
+              ? { x: st.position.x, z: st.position.z }
+              : (step.position ?? { x: dataset.site.widthM / 2, z: dataset.site.depthM / 2 });
+            return {
+              id: step.id,
+              name: step.name,
+              type: step.type,
+              sortOrder: step.sortOrder,
+              position: pos,
+              fields: st?.fields ?? [],
+              controlType: st?.controlType,
+            };
+          });
         const newDto: TwinDTO = {
           siteName: dataset.site.name,
           siteWidth: dataset.site.widthM,
@@ -96,6 +130,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           flowSegments: buildFlowPaths(dataset),
           separationIssues: findSeparationIssues(dataset),
           chainResult: liveDto.chainResult, // keep existing chain result (async, not recomputed client-side)
+          tourSteps: importedTourSteps,
         };
         // Clear overlay since imported dataset has explicit positions
         clearOverlay();
@@ -108,8 +143,31 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     return () => window.removeEventListener('twin-import', handler);
   }, [liveDto.chainResult]);
 
-  const handleStationClick = useCallback((station: StationDTO) => {
-    setSelectedStation((prev) => (prev?.id === station.id ? null : station));
+  const handleStationClick = useCallback(
+    (station: StationDTO) => {
+      if (!tourActive) setSelectedStation((prev) => (prev?.id === station.id ? null : station));
+    },
+    [tourActive],
+  );
+
+  const startTour = useCallback(() => {
+    setTourActive(true);
+    setTourIndex(0);
+    setSelectedStation(null);
+    setEditMode(false);
+  }, []);
+
+  const exitTour = useCallback(() => {
+    setTourActive(false);
+    setTourTarget(null);
+  }, []);
+
+  const tourNext = useCallback(() => {
+    setTourIndex((i) => Math.min(i + 1, liveDto.tourSteps.length - 1));
+  }, [liveDto.tourSteps.length]);
+
+  const tourPrev = useCallback(() => {
+    setTourIndex((i) => Math.max(i - 1, 0));
   }, []);
 
   /** Called by StationMarker when a drag completes in edit mode */
@@ -184,24 +242,72 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
         onClose={() => setSelectedStation(null)}
       />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {/* ── Toolbar (Prompt 7 + 8) ─────────────────────────────────────── */}
-        <TwinToolbar
-          locale={locale}
-          dir={dir}
-          showFlow={showFlow}
-          showSeparation={showSeparation}
-          issueCount={issueCount}
-          editMode={editMode}
-          onToggleFlow={() => setShowFlow((v) => !v)}
-          onToggleSeparation={() => setShowSeparation((v) => !v)}
-          onToggleEdit={() => {
-            setEditMode((v) => !v);
-            setSelectedStation(null);
-          }}
-          onReset={handleReset}
-          onExport={handleExport}
-          onImport={handleImport}
-        />
+        {/* ── Toolbar (Prompt 7 + 8 + 9) ────────────────────────────────── */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', direction: dir }}>
+          <TwinToolbar
+            locale={locale}
+            dir={dir}
+            showFlow={showFlow}
+            showSeparation={showSeparation}
+            issueCount={issueCount}
+            editMode={editMode}
+            onToggleFlow={() => setShowFlow((v) => !v)}
+            onToggleSeparation={() => setShowSeparation((v) => !v)}
+            onToggleEdit={() => {
+              setEditMode((v) => !v);
+              setSelectedStation(null);
+            }}
+            onReset={handleReset}
+            onExport={handleExport}
+            onImport={handleImport}
+          />
+
+          {/* Separator */}
+          <span style={{ width: '1px', height: '1.5rem', background: '#e5e7eb' }} />
+
+          {/* Guided tour button (Prompt 9) */}
+          {!tourActive ? (
+            <button
+              onClick={startTour}
+              disabled={liveDto.tourSteps.length === 0}
+              style={{
+                padding: '0.3rem 0.9rem',
+                borderRadius: '4px',
+                border: '2px solid #22c55e',
+                background: '#f7f8fa',
+                color: '#166534',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                cursor: liveDto.tourSteps.length === 0 ? 'default' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                opacity: liveDto.tourSteps.length === 0 ? 0.4 : 1,
+              }}
+            >
+              🎓 {t.tour.start}
+            </button>
+          ) : (
+            <button
+              onClick={exitTour}
+              style={{
+                padding: '0.3rem 0.9rem',
+                borderRadius: '4px',
+                border: '2px solid #22c55e',
+                background: '#22c55e',
+                color: '#fff',
+                fontWeight: 500,
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              🎓 {t.tour.exit}
+            </button>
+          )}
+        </div>
 
         {/* Edit mode banner */}
         {editMode && (
@@ -269,17 +375,33 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           ))}
         </div>
 
-        {/* ── 3-D Canvas ─────────────────────────────────────────────────── */}
-        <TwinCanvas
-          dto={liveDto}
-          locale={locale}
-          dir={dir}
-          showFlow={showFlow}
-          showSeparation={showSeparation}
-          editMode={editMode}
-          onStationClick={handleStationClick}
-          onStationMove={handleStationMove}
-        />
+        {/* ── 3-D Canvas + guided tour overlay ──────────────────────────── */}
+        <div style={{ position: 'relative' }}>
+          <TwinCanvas
+            dto={liveDto}
+            locale={locale}
+            dir={dir}
+            showFlow={showFlow}
+            showSeparation={showSeparation}
+            editMode={editMode && !tourActive}
+            tourActive={tourActive}
+            onStationClick={handleStationClick}
+            onStationMove={handleStationMove}
+          />
+
+          {/* Guided tour card overlay (Prompt 9) */}
+          {tourActive && liveDto.tourSteps.length > 0 && (
+            <GuidedTourCard
+              steps={liveDto.tourSteps}
+              currentIndex={tourIndex}
+              locale={locale}
+              dir={dir}
+              onNext={tourNext}
+              onPrev={tourPrev}
+              onExit={exitTour}
+            />
+          )}
+        </div>
 
         {/* ── Info row: issues + chain ───────────────────────────────────── */}
         <div
