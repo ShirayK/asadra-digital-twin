@@ -6,7 +6,7 @@
  * - Every 3 s emits one new reading per station with small noise, keeping all
  *   stations OK — except the cooling CCP (s-cooling) which drifts toward 9 °C
  *   and triggers an OUT_OF_RANGE breach.
- * - Corrective action callback resets the cooling station back to ≤ 4 °C and
+ * - Corrective action callback resets the cooling station back to 3 °C and
  *   marks it OK.
  *
  * Pure domain module: no React, no I/O — only deterministic logic +
@@ -45,7 +45,7 @@ export interface SimulatorConfig {
 
 const TICK_MS = 3_000;
 const COOLING_STATION_ID = 's-cooling';
-const COOLING_LIMIT = 4; // °C — must stay ≤ this
+const COOLING_LIMIT = 5; // °C — matches seed critical limit (s-cooling max)
 const COOLING_BREACH_TARGET = 9; // °C — drifts to this then holds
 const NOISE_AMPLITUDE = 0.2; // ± °C for non-drifting stations
 
@@ -112,7 +112,7 @@ export function tickSimulator(
   // Drift cooling temp
   let { coolingTemp, driftingUp } = prev;
   if (driftingUp) {
-    coolingTemp = Math.min(coolingTemp + 0.5 + noise(0.1), COOLING_BREACH_TARGET);
+    coolingTemp = Math.min(coolingTemp + 0.4 + noise(0.1), COOLING_BREACH_TARGET);
   } else {
     // After corrective action: snap down
     coolingTemp = Math.max(coolingTemp - 1.5 + noise(0.05), 1);
@@ -164,7 +164,7 @@ export function tickSimulator(
 export function applyCorrectiveAction(prev: SimulatorState): SimulatorState {
   return {
     ...prev,
-    coolingTemp: COOLING_LIMIT - 1, // 3 °C — clearly back in range
+    coolingTemp: COOLING_LIMIT - 2, // 3 °C — clearly back in range
     driftingUp: false,
     coolingBreaching: false,
   };

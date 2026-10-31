@@ -34,6 +34,18 @@ const CONTROL_TYPE_COLORS: Record<string, string> = {
  *   a truncated hash with chain-verified badge.
  * - All strings via i18n dictionaries. Readings are read-only.
  */
+// Manual fix after Bob ran out of Bobcoins: English field labels on /en
+const FIELD_LABEL_EN: Record<string, string> = {
+  temp: 'Temperature',
+  duration_h: 'Soak time',
+  test_passed: 'Test passed',
+  seal_ok: 'Seal OK',
+};
+function fieldLabel(locale: string, key: string, label?: string): string {
+  if (locale === 'en' && FIELD_LABEL_EN[key]) return FIELD_LABEL_EN[key];
+  return label ?? key;
+}
+
 export default function SidePanel({ station, locale, dir = 'ltr', onClose }: SidePanelProps) {
   const t = getDictionary(locale);
   const [chainResult, setChainResult] = useState<ChainVerificationResult | null>(null);
@@ -67,7 +79,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
   return (
     <div
       role="complementary"
-      aria-label={station.name}
+      aria-label={locale === 'en' && station.nameEn ? station.nameEn : station.name}
       style={{
         position: 'fixed',
         top: 0,
@@ -99,9 +111,10 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
               fontSize: '1rem',
               fontWeight: 700,
               wordBreak: 'break-word',
+              color: '#0f172a',
             }}
           >
-            {station.name}
+            {locale === 'en' && station.nameEn ? station.nameEn : station.name}
           </h2>
 
           {/* Control type badge */}
@@ -174,7 +187,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
                   }}
                 >
                   <div style={{ fontWeight: 600, marginBottom: '0.125rem' }}>
-                    {field.label}
+                    {fieldLabel(locale, field.key, field.label)}
                     {field.unit ? ` (${field.unit})` : ''}
                   </div>
                   <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
@@ -207,7 +220,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
               {station.lastReadings.map((reading) => (
-                <ReadingCard
+                <ReadingCard locale={locale}
                   key={reading.id}
                   reading={reading}
                   fields={station.fields}
@@ -312,7 +325,9 @@ function ReadingCard({
   reading,
   fields,
   t,
+  locale,
 }: {
+  locale: string;
   reading: StationDTO['lastReadings'][number];
   fields: StationDTO['fields'];
   t: ReturnType<typeof getDictionary>;
@@ -348,7 +363,7 @@ function ReadingCard({
             }}
           >
             <span style={{ color: '#475569' }}>
-              {field?.label ?? key}
+              {fieldLabel(locale, key, field?.label)}
               {field?.unit ? ` (${field.unit})` : ''}
             </span>
             <span

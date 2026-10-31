@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, Bounds, useBounds } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei';
+import PlantProps from './plant-props';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
@@ -70,9 +71,9 @@ export default function TwinCanvas({
   // Use the larger of width/depth to ensure the whole floor is visible
   const plantSpan = Math.max(dto.siteWidth, dto.siteDepth);
   // Distance chosen so the plant fills ~75% of the FOV (fov=40°, half = 20°)
-  const fitDist = (plantSpan / 2) / Math.tan((20 * Math.PI) / 180) * 1.15;
-  const camY = fitDist * 0.75;
-  const camZ = cz + fitDist * 0.65;
+  const fitDist = (plantSpan / 2) / Math.tan((20 * Math.PI) / 180) * 0.62;
+  const camY = fitDist * 0.85;
+  const camZ = cz + fitDist * 0.75;
 
   // Auto-rotate active until user interacts
   const autoRotate = !userInteracted && !editMode && !tourActive;
@@ -151,8 +152,7 @@ export default function TwinCanvas({
         />
 
         {/* ── Scene contents wrapped in Bounds for camera fit on load ──── */}
-        <Bounds fit clip observe margin={1.15}>
-          <SceneContents
+        <SceneContents
             dto={dto}
             locale={locale}
             showFlow={showFlow}
@@ -161,7 +161,6 @@ export default function TwinCanvas({
             onStationClick={handleStationClick}
             onStationMove={handleStationMove}
           />
-        </Bounds>
 
         {/* ── Post-processing: Bloom + Vignette ────────────────────────── */}
         <EffectComposer>
@@ -205,18 +204,15 @@ function SceneContents({
   onStationMove,
 }: SceneContentsProps) {
   // Fit the camera to the scene on mount only
-  const bounds = useBounds();
-  const didFit = useRef(false);
-  if (!didFit.current) {
-    didFit.current = true;
-    // Schedule after first render so geometry is measured
-    requestAnimationFrame(() => bounds.refresh().fit());
-  }
+  // Camera framing is computed analytically in TwinCanvas (manual fix after
+  // Bob ran out of Bobcoins: drei <Bounds> over-fitted to walls/ground).
 
   return (
     <>
       {/* ── Factory floor (dark epoxy, walls, emissive outlines) ──────── */}
       <FactoryFloor widthM={dto.siteWidth} depthM={dto.siteDepth} zones={dto.zones} />
+
+      <PlantProps zones={dto.zones} />
 
       {/* ── Zones (kept for separation overlay context) ────────────────── */}
       {dto.zones.map((zone) => (

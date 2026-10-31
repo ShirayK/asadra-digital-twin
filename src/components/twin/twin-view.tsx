@@ -56,7 +56,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   const [liveDto, setLiveDto] = useState<TwinDTO>(baseDto);
 
   // ── Simulator state (Session 14) ─────────────────────────────────────────
-  const [liveMode, setLiveMode] = useState(false);
+  const [liveMode, setLiveMode] = useState(true); // start live so visitors see the simulation immediately
   const [simState, setSimState] = useState<SimulatorState | null>(null);
   const [breachToast, setBreachToast] = useState<string | null>(null);
   // Ref to track whether breach toast has been shown for the current drift cycle
@@ -205,7 +205,11 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
         const temp = next.coolingTemp.toFixed(1);
         const coolingStation = baseDto.stations.find((s) => s.id === COOLING_STATION_ID);
         const limitLabel = coolingStation?.fields.find((f) => f.key === 'temp')?.max ?? COOLING_LIMIT;
-        setBreachToast(`CCP breach: Cooling ${temp}°C > ${limitLabel}°C`);
+        setBreachToast(
+          locale === 'he'
+            ? `חריגת CCP: קירור ${temp}°C > ${limitLabel}°C`
+            : `CCP breach: Cooling ${temp}°C > ${limitLabel}°C`,
+        );
       }
       if (!next.coolingBreaching) {
         breachShownRef.current = false;
@@ -378,7 +382,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     <>
       {/* ── Side panel (Prompt 6) ───────────────────────────────────────────── */}
       <SidePanel
-        station={selectedStation}
+        station={selectedStation ? liveDto.stations.find((s) => s.id === selectedStation.id) ?? selectedStation : null}
         locale={locale}
         dir={dir}
         onClose={() => setSelectedStation(null)}
@@ -514,6 +518,8 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               color: '#b91c1c',
               fontWeight: 600,
               animation: 'pulse 1s infinite',
+              // keep the corrective-action button clear of the 320px side panel
+              ...(selectedStation ? (dir === 'rtl' ? { marginLeft: 330 } : { marginRight: 330 }) : {}),
             }}
           >
             <span style={{ fontSize: '1.1rem' }}>🚨</span>
@@ -532,7 +538,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 whiteSpace: 'nowrap',
               }}
             >
-              ✓ Apply corrective action
+              {locale === 'he' ? '✓ בצע פעולה מתקנת' : '✓ Apply corrective action'}
             </button>
             <button
               onClick={() => setBreachToast(null)}
