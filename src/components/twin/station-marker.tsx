@@ -8,6 +8,7 @@ import type { Mesh, Group } from 'three';
 import type { StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
+import { EquipmentModel, resolveModelType } from './equipment-models';
 
 interface StationMarkerProps {
   station: StationDTO;
@@ -17,18 +18,18 @@ interface StationMarkerProps {
   onMove?: (id: string, x: number, z: number) => void;
 }
 
-/** CCP is taller so it stands out — bigger than before */
+/** Visual height of the equipment model (used to position status ring and label above it) */
 const HEIGHT_BY_TYPE: Record<string, number> = {
-  CCP: 2.0,
-  CP: 1.4,
-  PRP: 1.0,
+  CCP: 1.6,
+  CP: 1.3,
+  PRP: 1.1,
 };
 
-/** Radius of the station body — larger for readability */
-const RADIUS_BY_TYPE: Record<string, number> = {
-  CCP: 0.6,
-  CP: 0.45,
-  PRP: 0.35,
+/** Radius used for the status ring */
+const RING_RADIUS: Record<string, number> = {
+  CCP: 0.65,
+  CP: 0.55,
+  PRP: 0.45,
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -38,56 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
   STALE: '#f59e0b',
 };
 
-/** Equipment shape geometry per control type: CCP = hexagonal prism, CP = box, PRP = cylinder */
-function EquipmentBody({
-  controlType,
-  height,
-  radius,
-  hovered,
-  color,
-}: {
-  controlType: string;
-  height: number;
-  radius: number;
-  hovered: boolean;
-  color: string;
-}) {
-  const mat = (
-    <meshStandardMaterial
-      color={hovered ? '#e2e8f0' : '#1e293b'}
-      roughness={0.35}
-      metalness={0.3}
-    />
-  );
-
-  if (controlType === 'CCP') {
-    // Hexagonal prism for CCP — distinctive shape
-    return (
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[radius, radius, height, 6]} />
-        {mat}
-      </mesh>
-    );
-  }
-  if (controlType === 'CP') {
-    // Rounded box for CP
-    return (
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[radius * 2, height, radius * 2]} />
-        {mat}
-      </mesh>
-    );
-  }
-  // PRP — simple cylinder
-  return (
-    <mesh castShadow receiveShadow>
-      <cylinderGeometry args={[radius, radius * 1.1, height, 12]} />
-      {mat}
-    </mesh>
-  );
-}
-
-/** Status indicator ring at the top of the body */
+/** Status indicator ring at the top of the model */
 function StatusRing({
   radius,
   height,
@@ -102,16 +54,22 @@ function StatusRing({
   ringRef: React.RefObject<Mesh>;
 }) {
   return (
-    <mesh ref={ringRef} position={[0, height / 2 + 0.05, 0]}>
-      <torusGeometry args={[radius * 1.4, 0.1, 8, 32]} />
-      <meshStandardMaterial color={color} roughness={0.2} emissive={color} emissiveIntensity={pulse ? 0.6 : 0.1} />
+    <mesh ref={ringRef} position={[0, height + 0.12, 0]}>
+      <torusGeometry args={[radius, 0.09, 8, 32]} />
+      <meshStandardMaterial
+        color={color}
+        roughness={0.2}
+        metalness={0.3}
+        emissive={color}
+        emissiveIntensity={pulse ? 0.7 : 0.15}
+      />
     </mesh>
   );
 }
 
 /**
- * Station marker with equipment-like shape, always-visible label, status ring.
- * In edit mode, supports dragging on the floor plane with 0.5m snapping.
+ * Station marker that renders a realistic procedural equipment model,
+ * with the existing status ring, label, drag-in-edit-mode, and click behaviour.
  */
 export default function StationMarker({
   station,
@@ -128,10 +86,12 @@ export default function StationMarker({
 
   const { camera, gl, raycaster } = useThree();
 
-  const height = HEIGHT_BY_TYPE[station.controlType] ?? 1.0;
-  const radius = RADIUS_BY_TYPE[station.controlType] ?? 0.4;
+  const height = HEIGHT_BY_TYPE[station.controlType] ?? 1.1;
+  const ringR = RING_RADIUS[station.controlType] ?? 0.5;
   const color = STATUS_COLORS[station.status] ?? '#9ca3af';
   const isOutOfRange = station.status === 'OUT_OF_RANGE';
+
+  const modelType = resolveModelType(station.id, station.name);
 
   // Floor plane for raycasting during drag
   const floorPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
@@ -156,7 +116,6 @@ export default function StationMarker({
       e.stopPropagation();
       setDragging(true);
       gl.domElement.style.cursor = 'grabbing';
-      // Capture pointer so we receive move events outside the mesh
       (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     },
     [editMode, gl],
@@ -173,11 +132,11 @@ export default function StationMarker({
         const nx = snap(intersectPoint.current.x);
         const nz = snap(intersectPoint.current.z);
         if (groupRef.current) {
-          groupRef.current.position.set(nx, height / 2, nz);
+          groupRef.current.position.set(nx, 0, nz);
         }
       }
     },
-    [dragging, editMode, camera, raycaster, gl, height],
+    [dragging, editMode, camera, raycaster, gl],
   );
 
   const handlePointerUp = useCallback(
@@ -198,7 +157,8 @@ export default function StationMarker({
   return (
     <group
       ref={groupRef}
-      position={[station.position.x, height / 2, station.position.z]}
+      // Equipment models are built from y=0 (floor level), so group sits at y=0
+      position={[station.position.x, 0, station.position.z]}
       rotation={[0, station.position.rotationY ?? 0, 0]}
       onPointerEnter={(e) => {
         e.stopPropagation();
@@ -214,33 +174,39 @@ export default function StationMarker({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onClick={(e) => {
-        if (editMode) return; // no panel open in edit mode
+        if (editMode) return;
         e.stopPropagation();
         onClick(station);
       }}
     >
-      {/* Equipment-like body shape */}
-      <EquipmentBody
+      {/* Hover highlight ring on floor */}
+      {hovered && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+          <ringGeometry args={[ringR * 0.85, ringR * 1.1, 32]} />
+          <meshStandardMaterial color="#ffffff" transparent opacity={0.25} depthWrite={false} />
+        </mesh>
+      )}
+
+      {/* Realistic procedural equipment model */}
+      <EquipmentModel
+        modelType={modelType}
         controlType={station.controlType}
-        height={height}
-        radius={radius}
-        hovered={hovered}
-        color={color}
+        scale={1}
       />
 
-      {/* Status ring at top */}
+      {/* Status ring above equipment */}
       <StatusRing
-        radius={radius}
+        radius={ringR}
         height={height}
         color={color}
         pulse={isOutOfRange}
         ringRef={ringRef}
       />
 
-      {/* Always-visible label — no longer hover-only */}
+      {/* Always-visible label */}
       <Html
         center
-        position={[0, height / 2 + 0.7, 0]}
+        position={[0, height + 0.75, 0]}
         distanceFactor={14}
         style={{ pointerEvents: 'none', userSelect: 'none' }}
       >

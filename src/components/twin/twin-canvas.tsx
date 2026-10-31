@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, SoftShadows } from '@react-three/drei';
+import { OrbitControls, SoftShadows, Environment, ContactShadows } from '@react-three/drei';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
 import FactoryFloor from './factory-floor';
@@ -58,7 +58,6 @@ export default function TwinCanvas({
   );
 
   // Camera positioned to tightly frame the whole site
-  // Angle slightly from the front-left, filling the viewport
   const cx = dto.siteWidth / 2;
   const cz = dto.siteDepth / 2;
   const camDist = Math.max(dto.siteWidth, dto.siteDepth) * 0.9;
@@ -76,16 +75,19 @@ export default function TwinCanvas({
           near: 0.1,
           far: 500,
         }}
-        style={{ background: '#0b1220', borderRadius: '10px' }}
+        style={{ background: '#1a2235', borderRadius: '10px' }}
         gl={{ antialias: true }}
       >
-        {/* Hemisphere sky/ground ambient */}
-        <hemisphereLight args={['#b9d5ff', '#444422', 0.7]} />
+        {/* ── Environment (warehouse HDRI — no external download, uses drei's built-in preset) ── */}
+        <Environment preset="warehouse" />
 
-        {/* Key directional light with soft shadows */}
+        {/* ── Hemisphere sky/ground ambient ── */}
+        <hemisphereLight args={['#d8e8f5', '#4a4030', 0.55]} />
+
+        {/* ── Key directional light with soft shadows ── */}
         <directionalLight
           position={[dto.siteWidth * 0.6, 25, dto.siteDepth * 0.7]}
-          intensity={1.5}
+          intensity={1.8}
           castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-camera-near={0.5}
@@ -94,21 +96,36 @@ export default function TwinCanvas({
           shadow-camera-right={dto.siteWidth}
           shadow-camera-top={dto.siteDepth}
           shadow-camera-bottom={-dto.siteDepth}
+          shadow-bias={-0.0005}
         />
 
-        {/* Fill light from opposite side */}
+        {/* ── Fill light from opposite side ── */}
         <directionalLight
           position={[-dto.siteWidth * 0.4, 12, -dto.siteDepth * 0.4]}
-          intensity={0.5}
+          intensity={0.4}
         />
 
-        {/* Soft shadow helper (PCF) */}
+        {/* ── Warm overhead fill (factory ceiling lights feel) ── */}
+        <pointLight position={[cx, 8, cz]} intensity={0.8} distance={40} decay={1.5} />
+
+        {/* ── Soft shadow helper (PCF) ── */}
         <SoftShadows samples={16} focus={0.6} size={25} />
 
-        {/* Guided tour camera lerp (Prompt 9) */}
+        {/* ── Contact shadows on the floor for grounding ── */}
+        <ContactShadows
+          position={[cx, 0.01, cz]}
+          width={dto.siteWidth * 1.1}
+          height={dto.siteDepth * 1.1}
+          far={10}
+          blur={1.5}
+          opacity={0.4}
+          frames={1}
+        />
+
+        {/* ── Guided tour camera lerp ── */}
         {tourActive && <GuidedTourCamera />}
 
-        {/* OrbitControls — invalidates canvas on interaction */}
+        {/* ── OrbitControls — invalidates canvas on interaction ── */}
         <OrbitControls
           target={[cx, 0, cz]}
           enableDamping
@@ -118,15 +135,15 @@ export default function TwinCanvas({
           maxPolarAngle={Math.PI / 2.05}
         />
 
-        {/* Factory floor */}
-        <FactoryFloor widthM={dto.siteWidth} depthM={dto.siteDepth} />
+        {/* ── Factory floor (concrete, walls, partitions, safety lines, signs) ── */}
+        <FactoryFloor widthM={dto.siteWidth} depthM={dto.siteDepth} zones={dto.zones} />
 
-        {/* Zones */}
+        {/* ── Zones (hygiene overlays + labels — kept for separation overlay context) ── */}
         {dto.zones.map((zone) => (
           <ZoneMesh key={zone.id} zone={zone} locale={locale} />
         ))}
 
-        {/* Station markers */}
+        {/* ── Station markers (realistic equipment models) ── */}
         {dto.stations.map((station) => (
           <StationMarker
             key={station.id}
@@ -138,10 +155,10 @@ export default function TwinCanvas({
           />
         ))}
 
-        {/* Flow arrows (Prompt 7) */}
+        {/* ── Flow arrows ── */}
         {showFlow && <FlowArrows segments={dto.flowSegments} />}
 
-        {/* Separation overlay (Prompt 7) */}
+        {/* ── Separation overlay ── */}
         {showSeparation && (
           <SeparationOverlay
             issues={dto.separationIssues}
