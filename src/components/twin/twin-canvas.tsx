@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import PlantProps from './plant-props';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
@@ -135,6 +135,9 @@ export default function TwinCanvas({
         {/* ── Guided tour camera lerp ───────────────────────────────────── */}
         {tourActive && <GuidedTourCamera />}
 
+        {/* ── 3 s cinematic fly-in on load ─────────────────────────────── */}
+        <CinematicFlyIn end={[cx, camY, camZ]} target={[cx, 0, cz]} />
+
         {/* ── OrbitControls — auto-rotates until user interacts ─────────── */}
         <OrbitControls
           ref={orbitRef}
@@ -246,3 +249,32 @@ function SceneContents({
   );
 }
 
+
+/**
+ * Swoops the camera from a high, wide, rotated vantage down to the framed
+ * view over ~3 s (ease-in-out cubic), then hands control back to OrbitControls.
+ * Manual polish after Bob budget.
+ */
+function CinematicFlyIn({ end, target }: { end: [number, number, number]; target: [number, number, number] }) {
+  const { camera } = useThree();
+  const start = useRef<number | null>(null);
+  const done = useRef(false);
+  const DURATION = 3;
+  useFrame(({ clock }) => {
+    if (done.current) return;
+    if (start.current === null) start.current = clock.elapsedTime;
+    const t = Math.min((clock.elapsedTime - start.current) / DURATION, 1);
+    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const dx = end[0] - target[0];
+    const dz = end[2] - target[2];
+    const r0 = Math.hypot(dx, dz);
+    const a0 = Math.atan2(dx, dz);
+    const ang = a0 - (1 - e) * 1.4; // sweep ~80° around the plant
+    const r = r0 * (1 + (1 - e) * 1.2);
+    const y = end[1] * (1 + (1 - e) * 1.6);
+    camera.position.set(target[0] + Math.sin(ang) * r, y, target[2] + Math.cos(ang) * r);
+    camera.lookAt(target[0], target[1], target[2]);
+    if (t >= 1) done.current = true;
+  });
+  return null;
+}

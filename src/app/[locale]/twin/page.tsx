@@ -53,6 +53,37 @@ export interface TwinDTO {
   tourSteps: TourStep[];
 }
 
+// English text for the guided tour on /en (seed data is authored in Hebrew)
+const TOUR_EN_NAMES: Record<string, string> = {
+  'step-receive': 'Raw material receiving',
+  'step-soak': 'Chickpea soaking',
+  'step-cook': 'Cooking',
+  'step-tahini': 'Tahini mixing',
+  'step-cool': 'Cooling',
+  'step-detect': 'Metal detection',
+  'step-pack': 'Packaging',
+  'step-output': 'Finished product',
+};
+const FIELD_EN: Record<string, string> = {
+  temp: 'Temperature',
+  duration_h: 'Soak time',
+  test_passed: 'Test passed',
+  seal_ok: 'Seal OK',
+};
+const FREQ_EN: Record<string, string> = {
+  'כל משלוח': 'Every delivery',
+  'כל אצווה': 'Every batch',
+  'רציף': 'Continuous',
+  'כל שעה': 'Hourly',
+};
+const CA_EN: Record<string, string> = {
+  'דחה משלוח אם > 8°C': 'Reject delivery if > 8°C',
+  'הפסק בישול ובדוק ציוד אם < 90°C': 'Stop cooking and inspect equipment if < 90°C',
+  'קרר אם > 30°C': 'Chill if > 30°C',
+  'הכנס לקירור מהיר אם > 5°C': 'Move to blast chiller if > 5°C',
+  'בידוד אצווה ובדיקה חוזרת': 'Quarantine batch and re-test',
+};
+
 export default async function TwinPage({ params }: { params: { locale: string } }) {
   const locale = (locales.includes(params.locale as Locale)
     ? params.locale
@@ -111,6 +142,7 @@ export default async function TwinPage({ params }: { params: { locale: string } 
 
   // ── Build guided tour steps ────────────────────────────────────────────────
   const stationMap = new Map(dataset.stations.map((s) => [s.id, s]));
+  const isEn = locale === 'en';
   const tourSteps: TourStep[] = dataset.process.steps
     .slice()
     .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -121,11 +153,21 @@ export default async function TwinPage({ params }: { params: { locale: string } 
         : (step.position ?? { x: dataset.site.widthM / 2, z: dataset.site.depthM / 2 });
       return {
         id: step.id,
-        name: step.name,
+        name: isEn ? (TOUR_EN_NAMES[step.id] ?? station?.nameEn ?? step.name) : step.name,
         type: step.type,
         sortOrder: step.sortOrder,
         position,
-        fields: station?.fields ?? [],
+        fields: (station?.fields ?? []).map((f) =>
+          isEn
+            ? {
+                ...f,
+                label: FIELD_EN[f.key] ?? f.label,
+                unit: f.unit === 'שעות' ? 'h' : f.unit,
+                monitoringFrequency: f.monitoringFrequency ? FREQ_EN[f.monitoringFrequency] ?? f.monitoringFrequency : undefined,
+                correctiveActionText: f.correctiveActionText ? CA_EN[f.correctiveActionText] ?? f.correctiveActionText : undefined,
+              }
+            : f,
+        ),
         controlType: station?.controlType,
       };
     });
@@ -149,19 +191,11 @@ export default async function TwinPage({ params }: { params: { locale: string } 
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        padding: '1rem',
+        padding: '1rem 1.25rem',
         gap: '1rem',
+        background: 'radial-gradient(1200px 600px at 50% -10%, #13233d 0%, #0a0f1a 60%)',
       }}
     >
-      <h1
-        style={{
-          fontSize: '1.5rem',
-          fontWeight: 700,
-          margin: 0,
-        }}
-      >
-        {t.twin.title} — {locale === 'en' && dto.siteNameEn ? dto.siteNameEn : dto.siteName}
-      </h1>
 
       <TwinView dto={dto} locale={locale} />
     </main>

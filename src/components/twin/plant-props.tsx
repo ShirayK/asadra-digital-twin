@@ -1,5 +1,9 @@
 'use client';
 
+import { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import type { Group } from 'three';
+
 /**
  * Procedural set dressing: storage racks with pallets, packaging pallets,
  * overhead process pipes between tanks, and a high-care conveyor.
@@ -65,15 +69,40 @@ function Pipe({ from, to, y = 2.4, color = '#cbd5e1' }: { from: [number, number]
   const dz = to[1] - from[1];
   const len = Math.hypot(dx, dz);
   const ang = Math.atan2(dx, dz);
+  const pulses = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (!pulses.current) return;
+    pulses.current.children.forEach((c, i) => {
+      const t = (clock.elapsedTime * 0.35 + i / 4) % 1;
+      c.position.set(from[0] + dx * t, y, from[1] + dz * t);
+    });
+  });
   return (
     <group>
+      {/* thick outer pipe */}
       <mesh position={[(from[0] + to[0]) / 2, y, (from[1] + to[1]) / 2]} rotation={[Math.PI / 2, 0, -ang]} castShadow>
-        <cylinderGeometry args={[0.16, 0.16, len, 12]} />
-        <meshStandardMaterial color={color} {...{ metalness: 0.9, roughness: 0.25 }} />
+        <cylinderGeometry args={[0.26, 0.26, len, 18]} />
+        <meshStandardMaterial color={color} metalness={0.9} roughness={0.2} emissive="#0ea5e9" emissiveIntensity={0.18} />
       </mesh>
+      {/* flanges */}
+      {[0.15, 0.5, 0.85].map((t) => (
+        <mesh key={t} position={[from[0] + dx * t, y, from[1] + dz * t]} rotation={[Math.PI / 2, 0, -ang]}>
+          <cylinderGeometry args={[0.33, 0.33, 0.08, 18]} />
+          <meshStandardMaterial {...STEEL} />
+        </mesh>
+      ))}
+      {/* glowing flow pulses */}
+      <group ref={pulses}>
+        {[0, 1, 2, 3].map((i) => (
+          <mesh key={i}>
+            <sphereGeometry args={[0.3, 12, 10]} />
+            <meshStandardMaterial color="#67e8f9" emissive="#22d3ee" emissiveIntensity={2.2} transparent opacity={0.55} toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
       {[from, to].map((p, i) => (
         <mesh key={i} position={[p[0], y / 2 + 0.6, p[1]]}>
-          <cylinderGeometry args={[0.07, 0.07, y - 1.2, 10]} />
+          <cylinderGeometry args={[0.11, 0.11, y - 1.2, 12]} />
           <meshStandardMaterial {...STEEL} />
         </mesh>
       ))}

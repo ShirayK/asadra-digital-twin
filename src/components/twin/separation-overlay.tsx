@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { SeparationIssue } from '@/domain/separation';
@@ -77,7 +77,7 @@ function IssueSegment({
 
   const t = getDictionary(locale);
 
-  const Y = 0.12; // slightly higher than flow arrows so it's visible on top
+  const Y = 0.35; // slightly higher than flow arrows so it's visible on top
   const from: [number, number, number] = [resolved.from.x, Y, resolved.from.z];
   const to: [number, number, number] = [resolved.to.x, Y, resolved.to.z];
   const mid = {
@@ -90,8 +90,23 @@ function IssueSegment({
   const allergenSuffix =
     resolved.issue.allergenCode ? ` (${resolved.issue.allergenCode})` : '';
 
-  // Animate camera toward the target on click
-  useFrame(() => {
+  const glowRef = useRef<THREE.Mesh>(null);
+  const iconRef = useRef<THREE.Group>(null);
+  const dx = resolved.to.x - resolved.from.x;
+  const dz = resolved.to.z - resolved.from.z;
+  const len = Math.hypot(dx, dz);
+  const ang = Math.atan2(dx, dz);
+
+  // Animate camera toward the target on click; pulse the glow + bob the icon
+  useFrame(({ clock }) => {
+    const t2 = clock.elapsedTime;
+    if (glowRef.current) {
+      (glowRef.current.material as THREE.MeshBasicMaterial).opacity = 0.35 + 0.25 * Math.sin(t2 * 4);
+    }
+    if (iconRef.current) {
+      iconRef.current.position.y = 2.6 + Math.sin(t2 * 2) * 0.2;
+      iconRef.current.rotation.y = t2 * 1.2;
+    }
     if (!cameraTarget) return;
     camera.position.lerp(cameraTarget.pos, 0.05);
   });
@@ -124,12 +139,35 @@ function IssueSegment({
       {/* Red dashed line for this issue */}
       <Line
         points={[from, to]}
-        color="#ef4444"
-        lineWidth={hovered ? 4 : 3}
+        color="#ff3b3b"
+        lineWidth={hovered ? 10 : 8}
         dashed
-        dashSize={0.3}
-        gapSize={0.15}
+        dashSize={0.5}
+        gapSize={0.25}
       />
+
+      {/* Glowing halo tube under the dashed path */}
+      <mesh ref={glowRef} position={[mid.x, Y - 0.05, mid.z]} rotation={[Math.PI / 2, 0, -ang]}>
+        <cylinderGeometry args={[0.28, 0.28, len, 12, 1, true]} />
+        <meshBasicMaterial color="#ef4444" transparent opacity={0.45} toneMapped={false} depthWrite={false} />
+      </mesh>
+
+      {/* Floating 3-D warning triangle + always-visible badge */}
+      <group ref={iconRef} position={[mid.x, 2.6, mid.z]}>
+        <mesh>
+          <cylinderGeometry args={[0.7, 0.7, 0.12, 3]} />
+          <meshStandardMaterial color="#facc15" emissive="#f59e0b" emissiveIntensity={1.2} toneMapped={false} />
+        </mesh>
+        <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.95, 0.05, 8, 32]} />
+          <meshBasicMaterial color="#ef4444" toneMapped={false} />
+        </mesh>
+      </group>
+      <Html position={[mid.x, 3.9, mid.z]} center distanceFactor={16} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+        <div style={{ background: 'rgba(127,29,29,0.9)', border: '1px solid #ef4444', color: '#fff', fontSize: '12px', fontWeight: 800, padding: '2px 9px', borderRadius: 999, whiteSpace: 'nowrap', boxShadow: '0 0 14px rgba(239,68,68,0.8)' }}>
+          ⚠ {tooltipText}{allergenSuffix}
+        </div>
+      </Html>
 
       {/* Sphere at midpoint for clickability */}
       <mesh position={[mid.x, Y + 0.15, mid.z]}>

@@ -1,5 +1,80 @@
 'use client';
 
+import { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import type { Group, Mesh } from 'three';
+
+// ─── Detail helpers (manual polish after Bob budget) ──────────────────────────
+
+/** Round pressure/temperature gauge with a glowing face and needle. */
+function Gauge({ position, scale = 1, rotationY = 0 }: { position: [number, number, number]; scale?: number; rotationY?: number }) {
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.09 * scale, 0.09 * scale, 0.04 * scale, 18]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 0, 0.022 * scale]}>
+        <circleGeometry args={[0.075 * scale, 18]} />
+        <meshStandardMaterial color="#e0f2fe" emissive="#7dd3fc" emissiveIntensity={0.5} />
+      </mesh>
+      <mesh position={[0.02 * scale, 0.02 * scale, 0.026 * scale]} rotation={[0, 0, -0.8]}>
+        <boxGeometry args={[0.008 * scale, 0.06 * scale, 0.004 * scale]} />
+        <meshBasicMaterial color="#dc2626" />
+      </mesh>
+    </group>
+  );
+}
+
+/** Side ladder: two rails with rungs. */
+function Ladder({ height, x, scale = 1 }: { height: number; x: number; scale?: number }) {
+  const rungs = Math.max(3, Math.round(height / (0.14 * scale)));
+  return (
+    <group position={[x, 0, 0]}>
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[0, height / 2, side * 0.09 * scale]}>
+          <boxGeometry args={[0.025 * scale, height, 0.025 * scale]} />
+          <meshStandardMaterial color="#facc15" metalness={0.4} roughness={0.5} />
+        </mesh>
+      ))}
+      {Array.from({ length: rungs }).map((_, i) => (
+        <mesh key={i} position={[0, (i + 0.5) * (height / rungs), 0]}>
+          <boxGeometry args={[0.018 * scale, 0.018 * scale, 0.18 * scale]} />
+          <meshStandardMaterial color="#eab308" metalness={0.4} roughness={0.5} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Stylised capsule worker in hygiene whites, gently bobbing. */
+export function WorkerFigure({ position, color = '#f8fafc', phase = 0 }: { position: [number, number, number]; color?: string; phase?: number }) {
+  const ref = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      ref.current.position.y = position[1] + Math.abs(Math.sin(clock.elapsedTime * 1.6 + phase)) * 0.03;
+      ref.current.rotation.y = Math.sin(clock.elapsedTime * 0.5 + phase) * 0.6;
+    }
+  });
+  return (
+    <group ref={ref} position={position} scale={1.7}>
+      <mesh castShadow position={[0, 0.48, 0]}>
+        <capsuleGeometry args={[0.13, 0.42, 6, 12]} />
+        <meshStandardMaterial color={color} roughness={0.7} />
+      </mesh>
+      <mesh castShadow position={[0, 0.98, 0]}>
+        <sphereGeometry args={[0.11, 14, 10]} />
+        <meshStandardMaterial color="#f1c27d" roughness={0.8} />
+      </mesh>
+      {/* hairnet cap */}
+      <mesh position={[0, 1.04, 0]}>
+        <sphereGeometry args={[0.115, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#60a5fa" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
 // ─── Shared materials (created once, reused) ──────────────────────────────────
 
 function SteelMat({ color = '#b0b8c1', roughness = 0.25, metalness = 0.85 }: {
@@ -71,6 +146,22 @@ export function TankModel({
         <torusGeometry args={[r * 0.32, 0.03 * scale, 6, 16]} />
         <SteelMat color="#8a9aa8" roughness={0.2} />
       </mesh>
+
+      {/* Weld seams */}
+      {[-h * 0.25, h * 0.25].map((y, i) => (
+        <mesh key={i} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[r * 1.005, 0.008 * scale, 4, 24]} />
+          <SteelMat color="#9aa6b2" />
+        </mesh>
+      ))}
+
+      {/* Ladder to the manway */}
+      <group position={[0, -h / 2 - legH, 0]}>
+        <Ladder height={h + legH + r * 0.6} x={-r - 0.06 * scale} scale={scale} />
+      </group>
+
+      {/* Gauge */}
+      <Gauge position={[0, h * 0.15, r + 0.02 * scale]} scale={scale} />
     </group>
   );
 }
@@ -106,6 +197,12 @@ export function KettleModel({ scale = 1 }: { scale?: number }) {
         <cylinderGeometry args={[0.04 * scale, 0.04 * scale, 0.45 * scale, 8]} />
         <PipeMat />
       </mesh>
+
+      <Gauge position={[0, h * 0.25, r + 0.06 * scale]} scale={scale * 1.2} />
+      <Gauge position={[r + 0.06 * scale, h * 0.25, 0]} scale={scale} rotationY={Math.PI / 2} />
+      <group position={[0, -h / 2 - legH, 0]}>
+        <Ladder height={h + legH + r * 0.5} x={-r - 0.08 * scale} scale={scale} />
+      </group>
 
       {/* Four heavy legs */}
       {[[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([lx, lz], i) => (
@@ -155,11 +252,50 @@ export function ChillerModel({ scale = 1 }: { scale?: number }) {
         </mesh>
       ))}
 
+      {/* Fan grills on the side */}
+      {[h * 0.3, h * 0.7].map((y, i) => (
+        <ChillerFan key={i} position={[w / 2 + 0.01 * scale, y, 0]} scale={scale} />
+      ))}
+      {/* Status strip above door */}
+      <mesh position={[0, h * 0.95, d / 2 + 0.012 * scale]}>
+        <boxGeometry args={[w * 0.6, 0.04 * scale, 0.01 * scale]} />
+        <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={1.2} />
+      </mesh>
+
       {/* Compressor box on top-back */}
       <mesh castShadow position={[0, h + 0.12 * scale, -d * 0.2]}>
         <boxGeometry args={[w * 0.55, 0.22 * scale, d * 0.55]} />
         <meshStandardMaterial color="#9aaabb" roughness={0.5} metalness={0.6} />
       </mesh>
+    </group>
+  );
+}
+
+function ChillerFan({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  const blades = useRef<Group>(null);
+  useFrame((_, dt) => {
+    if (blades.current) blades.current.rotation.x += dt * 6;
+  });
+  return (
+    <group position={position} rotation={[0, Math.PI / 2, 0]}>
+      <mesh>
+        <torusGeometry args={[0.18 * scale, 0.02 * scale, 6, 24]} />
+        <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
+      </mesh>
+      {[0.06, 0.12].map((rr) => (
+        <mesh key={rr}>
+          <torusGeometry args={[rr * scale, 0.006 * scale, 4, 20]} />
+          <meshStandardMaterial color="#64748b" metalness={0.8} />
+        </mesh>
+      ))}
+      <group ref={blades} rotation={[0, Math.PI / 2, 0]}>
+        {[0, 1, 2, 3].map((k) => (
+          <mesh key={k} rotation={[(k * Math.PI) / 2, 0, 0]} position={[0, 0, 0]}>
+            <boxGeometry args={[0.01 * scale, 0.3 * scale, 0.05 * scale]} />
+            <meshStandardMaterial color="#1e293b" />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
@@ -257,11 +393,60 @@ export function PackagingMachineModel({ scale = 1 }: { scale?: number }) {
         <meshStandardMaterial color="#60a5fa" roughness={0.1} emissive="#3b82f6" emissiveIntensity={0.6} />
       </mesh>
 
-      {/* Short output conveyor */}
-      <mesh castShadow receiveShadow position={[fw * 0.5 + 0.38 * scale, fh * 0.28, 0]}>
-        <boxGeometry args={[0.55 * scale, 0.07 * scale, fd * 0.7]} />
-        <meshStandardMaterial color="#9aabb8" roughness={0.4} metalness={0.6} />
-      </mesh>
+      {/* Output conveyor with animated rollers and moving packs */}
+      <Conveyor position={[fw * 0.5 + 0.7 * scale, fh * 0.32, 0]} length={1.2 * scale} width={fd * 0.7} scale={scale} />
+    </group>
+  );
+}
+
+function Conveyor({ position, length, width, scale = 1 }: { position: [number, number, number]; length: number; width: number; scale?: number }) {
+  const rollers = useRef<Mesh[]>([]);
+  const packs = useRef<Group>(null);
+  const n = 9;
+  useFrame((_, dt) => {
+    rollers.current.forEach((m) => m && (m.rotation.y -= dt * 5));
+    if (packs.current) {
+      packs.current.children.forEach((c) => {
+        c.position.x += dt * 0.25 * scale;
+        if (c.position.x > length / 2) c.position.x -= length;
+      });
+    }
+  });
+  return (
+    <group position={position}>
+      {[-1, 1].map((side) => (
+        <mesh key={side} castShadow position={[0, 0, (side * width) / 2]}>
+          <boxGeometry args={[length, 0.08 * scale, 0.03 * scale]} />
+          <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.3} />
+        </mesh>
+      ))}
+      {Array.from({ length: n }).map((_, i) => (
+        <mesh
+          key={i}
+          ref={(m) => { if (m) rollers.current[i] = m; }}
+          position={[-length / 2 + (i + 0.5) * (length / n), 0, 0]}
+          rotation={[Math.PI / 2, 0, 0]}
+        >
+          <cylinderGeometry args={[0.035 * scale, 0.035 * scale, width, 10]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+        </mesh>
+      ))}
+      {[-1, 1].map((side) =>
+        [-1, 1].map((e) => (
+          <mesh key={`${side}${e}`} position={[(e * length) / 2.3, -0.16 * scale, (side * width) / 2]}>
+            <boxGeometry args={[0.03 * scale, 0.32 * scale, 0.03 * scale]} />
+            <meshStandardMaterial color="#475569" />
+          </mesh>
+        )),
+      )}
+      <group ref={packs}>
+        {[0, 1, 2].map((k) => (
+          <mesh key={k} castShadow position={[-length / 2 + (k * length) / 3, 0.08 * scale, 0]}>
+            <boxGeometry args={[0.16 * scale, 0.09 * scale, 0.12 * scale]} />
+            <meshStandardMaterial color="#fde68a" roughness={0.6} />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
@@ -387,6 +572,32 @@ export function resolveModelType(id: string, name: string): EquipmentModelType {
 
 /** Render the right equipment model for a station, offset so it sits on the floor. */
 export function EquipmentModel({
+  modelType,
+  controlType,
+  scale = 1,
+}: {
+  modelType: EquipmentModelType;
+  controlType: string;
+  scale?: number;
+}) {
+  const worker = WORKER_SPOT[modelType];
+  return (
+    <group>
+      <EquipmentBody modelType={modelType} controlType={controlType} scale={scale} />
+      {worker && <WorkerFigure position={[worker[0] * scale, 0, worker[2] * scale]} phase={worker[0] * 3} />}
+    </group>
+  );
+}
+
+const WORKER_SPOT: Partial<Record<EquipmentModelType, [number, number, number]>> = {
+  'receiving-dock': [0.2, 0, 0.75],
+  kettle: [0.8, 0, 0.6],
+  chiller: [-0.9, 0, 0.6],
+  packaging: [-0.3, 0, 0.75],
+  'metal-detector': [0.6, 0, 0.55],
+};
+
+function EquipmentBody({
   modelType,
   controlType,
   scale = 1,

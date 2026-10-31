@@ -32,6 +32,14 @@ export interface SimulatorState {
   coolingTemp: number;
   /** Drift direction: true = drifting up (toward breach) */
   driftingUp: boolean;
+  /** Total ticks since init (drives the periodic STALE episode) */
+  tickCount?: number;
+  /** Ticks elapsed since the last corrective action (null = none pending) */
+  ticksSinceCorrective?: number | null;
+  /** Station currently simulated as STALE (sensor dropout), if any */
+  staleStationId?: string | null;
+  /** Remaining ticks of the current STALE episode */
+  staleTicksLeft?: number;
 }
 
 export interface SimulatorConfig {
@@ -47,6 +55,13 @@ const TICK_MS = 3_000;
 const COOLING_STATION_ID = 's-cooling';
 const COOLING_LIMIT = 5; // °C — matches seed critical limit (s-cooling max)
 const COOLING_BREACH_TARGET = 9; // °C — drifts to this then holds
+/** After a corrective action, cooling resumes drifting after this many ticks
+ * (6 × 3 s ≈ 18 s, then ~6 ticks of drift → breach again ≈ 45 s later). */
+const RESUME_DRIFT_AFTER_TICKS = 6;
+/** Every N ticks a non-cooling CCP sensor drops out briefly (STALE). */
+const STALE_EVERY_TICKS = 20;
+const STALE_DURATION_TICKS = 3;
+const STALE_STATION_ID = 's-cooking';
 const NOISE_AMPLITUDE = 0.2; // ± °C for non-drifting stations
 
 // ── Initialiser ───────────────────────────────────────────────────────────────
@@ -111,6 +126,25 @@ export function tickSimulator(
 
   // Drift cooling temp
   let { coolingTemp, driftingUp } = prev;
+  const tickCount = (prev.tickCount ?? 0) + 1;
+  let ticksSinceCorrective = prev.ticksSinceCorrective ?? null;
+  if (ticksSinceCorrective !== null) {
+    ticksSinceCorrective += 1;
+    if (ticksSinceCorrective >= RESUME_DRIFT_AFTER_TICKS) {
+      driftingUp = true; // cycle: equipment drifts again → new breach
+      ticksSinceCorrective = null;
+    }
+  }
+  // Periodic sensor dropout on another CCP
+  let staleStationId = prev.staleStationId ?? null;
+  let staleTicksLeft = prev.staleTicksLeft ?? 0;
+  if (staleTicksLeft > 0) {
+    staleTicksLeft -= 1;
+    if (staleTicksLeft === 0) staleStationId = null;
+  } else if (tickCount % STALE_EVERY_TICKS === 0 && config.stations.some((s) => s.id === STALE_STATION_ID)) {
+    staleStationId = STALE_STATION_ID;
+    staleTicksLeft = STALE_DURATION_TICKS;
+  }
   if (driftingUp) {
     coolingTemp = Math.min(coolingTemp + 0.4 + noise(0.1), COOLING_BREACH_TARGET);
   } else {
@@ -122,6 +156,7 @@ export function tickSimulator(
   const coolingBreaching = coolingTemp > COOLING_LIMIT;
 
   for (const station of config.stations) {
+    if (station.id === staleStationId) continue; // no reading while sensor is offline
     const prev_list = readings.get(station.id) ?? [];
     let values: Record<string, number>;
 
@@ -155,7 +190,7 @@ export function tickSimulator(
     readings.set(station.id, [newReading, ...prev_list].slice(0, 20));
   }
 
-  return { readings, coolingBreaching, coolingTemp, driftingUp };
+  return { readings, coolingBreaching, coolingTemp, driftingUp, tickCount, ticksSinceCorrective, staleStationId, staleTicksLeft };
 }
 
 /**
@@ -167,7 +202,9 @@ export function applyCorrectiveAction(prev: SimulatorState): SimulatorState {
     coolingTemp: COOLING_LIMIT - 2, // 3 °C — clearly back in range
     driftingUp: false,
     coolingBreaching: false,
+    ticksSinceCorrective: 0,
   };
 }
 
+export { RESUME_DRIFT_AFTER_TICKS, STALE_EVERY_TICKS, STALE_DURATION_TICKS, STALE_STATION_ID };
 export { TICK_MS, COOLING_STATION_ID, COOLING_BREACH_TARGET, COOLING_LIMIT };

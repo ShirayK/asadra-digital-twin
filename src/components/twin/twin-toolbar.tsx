@@ -105,7 +105,7 @@ export default function TwinToolbar({
       </button>
 
       {/* Separator */}
-      <span style={{ width: '1px', height: '1.5rem', background: '#e5e7eb', margin: '0 0.25rem' }} />
+      <span style={{ width: '1px', height: '1.5rem', background: 'rgba(148,163,184,0.3)', margin: '0 0.25rem' }} />
 
       {/* Edit mode toggle */}
       <button
@@ -155,40 +155,34 @@ export default function TwinToolbar({
   );
 }
 
-function toggleStyle(
-  active: boolean,
-  activeColor: string,
-  activeBg?: string,
-  activeText?: string,
-): React.CSSProperties {
-  return {
-    padding: '0.3rem 0.9rem',
-    borderRadius: '4px',
-    border: '2px solid',
-    borderColor: active ? activeColor : '#e5e7eb',
-    background: active ? (activeBg ?? activeColor) : '#f7f8fa',
-    color: active ? (activeText ?? '#fff') : '#1f2328',
-    fontWeight: 500,
-    fontSize: '0.875rem',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-  };
+const GLASS_BASE: React.CSSProperties = {
+  padding: '0.4rem 0.95rem',
+  borderRadius: '999px',
+  border: '1px solid rgba(148,163,184,0.25)',
+  background: 'rgba(15,23,42,0.55)',
+  backdropFilter: 'blur(10px)',
+  color: '#cbd5e1',
+  fontWeight: 600,
+  fontSize: '0.85rem',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.4rem',
+  letterSpacing: '0.01em',
+};
+
+function toggleStyle(active: boolean, activeColor: string, _bg?: string, _text?: string): React.CSSProperties {
+  return active
+    ? {
+        ...GLASS_BASE,
+        border: `1px solid ${activeColor}`,
+        background: `${activeColor}26`,
+        color: '#f8fafc',
+        boxShadow: `0 0 14px ${activeColor}66, inset 0 0 8px ${activeColor}33`,
+      }
+    : GLASS_BASE;
 }
 
 function actionStyle(color: string): React.CSSProperties {
-  return {
-    padding: '0.3rem 0.9rem',
-    borderRadius: '4px',
-    border: `2px solid ${color}`,
-    background: '#f7f8fa',
-    color: '#1f2328',
-    fontWeight: 500,
-    fontSize: '0.875rem',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-  };
+  return { ...GLASS_BASE, border: `1px solid ${color}`, color: '#e2e8f0' };
 }

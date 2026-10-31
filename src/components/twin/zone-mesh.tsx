@@ -44,61 +44,36 @@ export default function ZoneMesh({ zone, locale }: ZoneMeshProps) {
         />
       </mesh>
 
-      {/* Zone label + allergen chips */}
+      {/* Compact zone tag on the front edge of the zone floor (kept off the equipment) */}
       <Html
         center
-        position={[0, 0.5, 0]}
+        position={[0, 0.1, zone.depth / 2 - 0.35]}
         style={{ pointerEvents: 'none', userSelect: 'none' }}
-        distanceFactor={12}
+        distanceFactor={16}
       >
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '2px',
+            gap: '4px',
             whiteSpace: 'nowrap',
+            background: 'rgba(8,12,24,0.55)',
+            border: `1px solid ${color}88`,
+            color: '#e2e8f0',
+            fontSize: '10px',
+            fontWeight: 600,
+            padding: '1px 7px',
+            borderRadius: '999px',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
           }}
+          title={t.hygieneClass[zone.hygieneClass as keyof typeof t.hygieneClass]}
         >
-          <span
-            style={{
-              background: 'rgba(0,0,0,0.6)',
-              color: '#fff',
-              fontSize: '11px',
-              fontWeight: 600,
-              padding: '1px 6px',
-              borderRadius: '3px',
-            }}
-          >
-            {locale === 'en' && zone.nameEn ? zone.nameEn : zone.name}
-          </span>
-          <span
-            style={{
-              background: color,
-              color: '#fff',
-              fontSize: '9px',
-              padding: '1px 5px',
-              borderRadius: '3px',
-              opacity: 0.9,
-            }}
-          >
-            {t.hygieneClass[zone.hygieneClass as keyof typeof t.hygieneClass]}
-          </span>
-          {zone.allergenCodes.map((code) => (
-            <span
-              key={code}
-              style={{
-                background: '#dc2626',
-                color: '#fff',
-                fontSize: '9px',
-                fontWeight: 700,
-                padding: '1px 5px',
-                borderRadius: '3px',
-              }}
-            >
-              ⚠ {code}
-            </span>
-          ))}
+          <span style={{ width: 6, height: 6, borderRadius: 999, background: color }} />
+          {locale === 'en' && zone.nameEn ? zone.nameEn : zone.name}
+          {zone.allergenCodes.length > 0 && (
+            <span style={{ color: '#fca5a5' }}>⚠ {zone.allergenCodes.join(', ')}</span>
+          )}
         </div>
       </Html>
     </group>

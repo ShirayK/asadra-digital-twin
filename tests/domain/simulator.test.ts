@@ -160,3 +160,34 @@ describe('applyCorrectiveAction', () => {
     expect(fixed.driftingUp).toBe(false);
   });
 });
+
+describe('simulator cycles (round 3)', () => {
+  const stations = [coolingStation, cookingStation, metalDetector];
+  const cfg = { stations, seedReadings: [] as Reading[] };
+
+  it('cooling breaches again ~45s after a corrective action', () => {
+    let s = initSimulatorState(cfg);
+    let i = 0;
+    while (!s.coolingBreaching && i < 50) { s = tickSimulator(s, cfg); i++; }
+    expect(s.coolingBreaching).toBe(true);
+    s = applyCorrectiveAction(s);
+    let ticks = 0;
+    do { s = tickSimulator(s, cfg); ticks++; } while (!s.coolingBreaching && ticks < 60);
+    expect(s.coolingBreaching).toBe(true);
+    const seconds = ticks * 3;
+    expect(seconds).toBeGreaterThanOrEqual(30);
+    expect(seconds).toBeLessThanOrEqual(60);
+  });
+
+  it('cooking CCP briefly goes STALE (no new readings) then recovers', () => {
+    let s = initSimulatorState(cfg);
+    const staleSeen: number[] = [];
+    for (let i = 1; i <= 30; i++) {
+      s = tickSimulator(s, cfg);
+      if (s.staleStationId === 's-cooking') staleSeen.push(i);
+    }
+    expect(staleSeen.length).toBeGreaterThan(0);
+    expect(staleSeen.length).toBeLessThanOrEqual(4);
+    expect(s.staleStationId ?? null).toBeNull();
+  });
+});

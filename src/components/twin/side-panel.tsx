@@ -21,7 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const CONTROL_TYPE_COLORS: Record<string, string> = {
-  CCP: '#dc2626',
+  CCP: '#fca5a5',
   CP: '#d97706',
   PRP: '#2563eb',
 };
@@ -70,8 +70,8 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
   // Positioning: fixed panel on the appropriate side
   const sideStyle: React.CSSProperties =
     dir === 'rtl'
-      ? { left: 0, borderRight: '1px solid #e2e8f0' }
-      : { right: 0, borderLeft: '1px solid #e2e8f0' };
+      ? { left: 0, borderRight: '1px solid rgba(148,163,184,0.2)' }
+      : { right: 0, borderLeft: '1px solid rgba(148,163,184,0.2)' };
 
   const latestReading = station.lastReadings[0] ?? null;
   const latestCorrectiveAction = latestReading?.correctiveAction ?? null;
@@ -85,8 +85,11 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
         top: 0,
         bottom: 0,
         width: '320px',
-        background: '#ffffff',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+        background: 'rgba(10,15,28,0.82)',
+        backdropFilter: 'blur(16px)',
+        color: '#e2e8f0',
+        borderInline: '1px solid rgba(148,163,184,0.2)',
+        boxShadow: '0 0 40px rgba(0,0,0,0.5)',
         overflowY: 'auto',
         zIndex: 50,
         direction: dir,
@@ -100,7 +103,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
           justifyContent: 'space-between',
           alignItems: 'flex-start',
           padding: '1rem',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid rgba(148,163,184,0.2)',
           gap: '0.5rem',
         }}
       >
@@ -111,7 +114,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
               fontSize: '1rem',
               fontWeight: 700,
               wordBreak: 'break-word',
-              color: '#0f172a',
+              color: 'rgba(30,41,59,0.6)',
             }}
           >
             {locale === 'en' && station.nameEn ? station.nameEn : station.name}
@@ -159,7 +162,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
             border: 'none',
             cursor: 'pointer',
             fontSize: '1.25rem',
-            color: '#64748b',
+            color: '#94a3b8',
             lineHeight: 1,
             padding: '0.25rem',
             flexShrink: 0,
@@ -180,7 +183,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
                 <div
                   key={field.key}
                   style={{
-                    background: '#f8fafc',
+                    background: 'rgba(30,41,59,0.6)',
                     borderRadius: '6px',
                     padding: '0.5rem 0.75rem',
                     fontSize: '0.8125rem',
@@ -190,7 +193,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
                     {fieldLabel(locale, field.key, field.label)}
                     {field.unit ? ` (${field.unit})` : ''}
                   </div>
-                  <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
                     {field.min !== undefined && (
                       <span>
                         {t.panel.min}: {field.min}
@@ -238,12 +241,12 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
             <p
               style={{
                 margin: 0,
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
+                background: 'rgba(127,29,29,0.35)',
+                border: '1px solid #ef4444',
                 borderRadius: '6px',
                 padding: '0.625rem 0.75rem',
                 fontSize: '0.8125rem',
-                color: '#b91c1c',
+                color: '#fecaca',
               }}
             >
               {latestCorrectiveAction}
@@ -265,13 +268,13 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
             >
               <code
                 style={{
-                  background: '#f1f5f9',
+                  background: 'rgba(30,41,59,0.6)',
                   borderRadius: '4px',
                   padding: '0.25rem 0.5rem',
                   fontFamily: 'monospace',
                   fontSize: '0.75rem',
                   wordBreak: 'break-all',
-                  color: '#334155',
+                  color: '#cbd5e1',
                 }}
               >
                 {latestReading.hash.slice(0, 16)}…
@@ -335,13 +338,13 @@ function ReadingCard({
   return (
     <div
       style={{
-        background: '#f8fafc',
+        background: 'rgba(30,41,59,0.6)',
         borderRadius: '6px',
         padding: '0.5rem 0.75rem',
         fontSize: '0.8125rem',
       }}
     >
-      <div style={{ color: '#64748b', marginBottom: '0.25rem', fontSize: '0.75rem' }}>
+      <div style={{ color: '#94a3b8', marginBottom: '0.25rem', fontSize: '0.75rem' }}>
         {t.panel.recordedAt}: {new Date(reading.recordedAt).toLocaleString()}
       </div>
 
@@ -362,15 +365,15 @@ function ReadingCard({
               padding: '1px 0',
             }}
           >
-            <span style={{ color: '#475569' }}>
+            <span style={{ color: '#94a3b8' }}>
               {fieldLabel(locale, key, field?.label)}
               {field?.unit ? ` (${field.unit})` : ''}
             </span>
             <span
               style={{
                 fontWeight: 600,
-                color: outOfRange ? '#dc2626' : '#1e293b',
-                background: outOfRange ? '#fee2e2' : 'transparent',
+                color: outOfRange ? '#fca5a5' : '#e2e8f0',
+                background: outOfRange ? 'rgba(239,68,68,0.2)' : 'transparent',
                 padding: outOfRange ? '0 4px' : undefined,
                 borderRadius: outOfRange ? '3px' : undefined,
               }}
@@ -386,7 +389,7 @@ function ReadingCard({
         <div
           style={{
             marginTop: '0.25rem',
-            color: '#b91c1c',
+            color: '#fecaca',
             fontSize: '0.75rem',
             fontStyle: 'italic',
           }}

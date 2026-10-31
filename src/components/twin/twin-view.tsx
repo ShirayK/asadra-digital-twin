@@ -229,7 +229,8 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
         };
         return {
           ...s,
-          status: getStationStatus(station, simReadings[0] ?? null, now),
+          // Simulated sensor dropout → STALE (simulator skips readings for it)
+          status: next.staleStationId === s.id ? 'STALE' : getStationStatus(station, simReadings[0] ?? null, now),
           lastReadings: simReadings,
         };
       });
@@ -388,6 +389,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
         onClose={() => setSelectedStation(null)}
       />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <TwinHeader dto={liveDto} locale={locale} dir={dir} liveMode={liveMode} />
         {/* ── Toolbar (Prompt 7 + 8 + 9) ────────────────────────────────── */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', direction: dir }}>
           <TwinToolbar
@@ -411,7 +413,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           />
 
           {/* Separator */}
-          <span style={{ width: '1px', height: '1.5rem', background: '#e5e7eb' }} />
+          <span style={{ width: '1px', height: '1.5rem', background: 'rgba(148,163,184,0.3)' }} />
 
           {/* Guided tour button (Prompt 9) */}
           {!tourActive ? (
@@ -419,11 +421,11 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               onClick={startTour}
               disabled={liveDto.tourSteps.length === 0}
               style={{
-                padding: '0.3rem 0.9rem',
-                borderRadius: '4px',
-                border: '2px solid #22c55e',
-                background: '#f7f8fa',
-                color: '#166534',
+                padding: '0.4rem 0.95rem',
+                borderRadius: '999px',
+                border: '1px solid #22c55e',
+                background: 'rgba(34,197,94,0.12)',
+                color: '#bbf7d0',
                 fontWeight: 500,
                 fontSize: '0.875rem',
                 cursor: liveDto.tourSteps.length === 0 ? 'default' : 'pointer',
@@ -439,10 +441,10 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             <button
               onClick={exitTour}
               style={{
-                padding: '0.3rem 0.9rem',
-                borderRadius: '4px',
-                border: '2px solid #22c55e',
-                background: '#22c55e',
+                padding: '0.4rem 0.95rem',
+                borderRadius: '999px',
+                border: '1px solid #22c55e',
+                background: 'rgba(34,197,94,0.35)',
                 color: '#fff',
                 fontWeight: 500,
                 fontSize: '0.875rem',
@@ -457,7 +459,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           )}
 
           {/* Separator */}
-          <span style={{ width: '1px', height: '1.5rem', background: '#e5e7eb' }} />
+          <span style={{ width: '1px', height: '1.5rem', background: 'rgba(148,163,184,0.3)' }} />
 
           {/* Language switcher (Prompt 10) */}
           <div
@@ -470,11 +472,11 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 href={`/${l}/twin`}
                 style={{
                   padding: '0.2rem 0.55rem',
-                  borderRadius: '4px',
+                  borderRadius: '999px',
                   border: '1px solid',
-                  borderColor: l === locale ? 'var(--color-accent, #3b82d4)' : '#e5e7eb',
-                  background: l === locale ? 'var(--color-accent, #3b82d4)' : '#f7f8fa',
-                  color: l === locale ? '#fff' : '#1f2328',
+                  borderColor: l === locale ? '#3b82f6' : 'rgba(148,163,184,0.25)',
+                  background: l === locale ? 'rgba(59,130,246,0.3)' : 'rgba(15,23,42,0.55)',
+                  color: l === locale ? '#fff' : '#cbd5e1',
                   fontWeight: l === locale ? 700 : 400,
                   textDecoration: 'none',
                 }}
@@ -490,11 +492,11 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <div
             style={{
               padding: '0.4rem 0.75rem',
-              background: '#f3f0ff',
+              background: 'rgba(124,92,216,0.15)',
               border: '1px solid #7c5cd8',
-              borderRadius: '4px',
+              borderRadius: '8px',
               fontSize: '0.85rem',
-              color: '#4c1d95',
+              color: '#ddd6fe',
               direction: dir,
             }}
           >
@@ -511,11 +513,13 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               alignItems: 'center',
               gap: '0.75rem',
               padding: '0.6rem 1rem',
-              background: '#fef2f2',
-              border: '2px solid #ef4444',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
-              color: '#b91c1c',
+              background: 'linear-gradient(90deg, rgba(127,29,29,0.85), rgba(15,23,42,0.75))',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid #ef4444',
+              boxShadow: '0 0 24px rgba(239,68,68,0.45)',
+              borderRadius: '12px',
+              fontSize: '0.95rem',
+              color: '#fecaca',
               fontWeight: 600,
               animation: 'pulse 1s infinite',
               // keep the corrective-action button clear of the 320px side panel
@@ -548,7 +552,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 borderRadius: '4px',
                 border: '1px solid #fca5a5',
                 background: 'transparent',
-                color: '#b91c1c',
+                color: '#fecaca',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
               }}
@@ -563,11 +567,11 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <div
             style={{
               padding: '0.4rem 0.75rem',
-              background: '#fef2f2',
+              background: 'rgba(127,29,29,0.35)',
               border: '1px solid #ef4444',
               borderRadius: '4px',
               fontSize: '0.85rem',
-              color: '#b91c1c',
+              color: '#fca5a5',
               direction: dir,
             }}
           >
@@ -592,16 +596,22 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 key={station.id}
                 onClick={() => !editMode && handleStationClick(station)}
                 style={{
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '4px',
-                  background: statusColor(station.status),
-                  color: '#fff',
+                  padding: '0.3rem 0.8rem',
+                  borderRadius: '999px',
+                  background: 'rgba(15,23,42,0.55)',
+                  backdropFilter: 'blur(10px)',
+                  color: '#e2e8f0',
                   fontWeight: 500,
-                  border: selectedStation?.id === station.id ? '2px solid #fff' : '2px solid transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  border: `1px solid ${selectedStation?.id === station.id ? '#fff' : statusColor(station.status) + '88'}`,
+                  boxShadow: station.status === 'OUT_OF_RANGE' ? '0 0 14px rgba(239,68,68,0.6)' : 'none',
                   cursor: editMode ? 'default' : 'pointer',
                 }}
                 title={`${displayName} — ${t.status[station.status as keyof typeof t.status]}`}
               >
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: statusColor(station.status), boxShadow: `0 0 8px ${statusColor(station.status)}` }} />
                 {displayName}
               </button>
             );
@@ -615,7 +625,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             style={{
               padding: '2rem',
               textAlign: 'center',
-              color: '#57606a',
+              color: '#94a3b8',
               fontSize: '1rem',
               border: '1px dashed #e5e7eb',
               borderRadius: '8px',
@@ -669,9 +679,10 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <span
             style={{
               padding: '0.25rem 0.75rem',
-              borderRadius: '4px',
-              background: issueCount > 0 ? '#ef4444' : '#22c55e',
-              color: '#fff',
+              borderRadius: '999px',
+              background: issueCount > 0 ? 'rgba(239,68,68,0.18)' : 'rgba(34,197,94,0.18)',
+              border: `1px solid ${issueCount > 0 ? '#ef4444' : '#22c55e'}`,
+              color: issueCount > 0 ? '#fecaca' : '#bbf7d0',
               fontWeight: 600,
             }}
           >
@@ -681,7 +692,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           </span>
 
           {/* Flow segment count */}
-          <span style={{ color: '#57606a' }}>
+          <span style={{ color: '#94a3b8' }}>
             {liveDto.flowSegments.length} {t.twin.flowSegments}
           </span>
 
@@ -689,9 +700,10 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <span
             style={{
               padding: '0.25rem 0.75rem',
-              borderRadius: '4px',
-              background: liveDto.chainResult.valid ? '#22c55e' : '#f59e0b',
-              color: '#fff',
+              borderRadius: '999px',
+              background: liveDto.chainResult.valid ? 'rgba(34,197,94,0.18)' : 'rgba(245,158,11,0.18)',
+              border: `1px solid ${liveDto.chainResult.valid ? '#22c55e' : '#f59e0b'}`,
+              color: liveDto.chainResult.valid ? '#bbf7d0' : '#fde68a',
               fontWeight: 600,
             }}
           >
@@ -706,7 +718,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               margin: 0,
               padding: dir === 'rtl' ? '0 1.25rem 0 0' : '0 0 0 1.25rem',
               fontSize: '0.875rem',
-              color: '#b91c1c',
+              color: '#fca5a5',
               direction: dir,
             }}
           >
@@ -789,4 +801,50 @@ function applyOverlayToDto(base: TwinDTO, overlay: LayoutOverlay): TwinDTO {
     flowSegments: buildFlowPaths(minimalDataset),
     separationIssues: findSeparationIssues(minimalDataset),
   };
+}
+
+// ── Header with logo, live clock and KPI strip (manual polish after Bob budget)
+function TwinHeader({ dto, locale, dir, liveMode }: { dto: TwinDTO; locale: Locale; dir: 'rtl' | 'ltr'; liveMode: boolean }) {
+  const t = getDictionary(locale);
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const ccps = dto.stations.filter((s) => s.controlType === 'CCP');
+  const ok = ccps.filter((s) => s.status === 'OK').length;
+  const open = dto.stations.filter((s) => s.status === 'OUT_OF_RANGE').length;
+  const he = locale === 'he';
+  const kpi = (label: string, value: string, color: string) => (
+    <div style={{ padding: '0.45rem 0.9rem', borderRadius: 12, background: 'rgba(15,23,42,0.55)', border: `1px solid ${color}55`, minWidth: 120 }}>
+      <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8' }}>{label}</div>
+      <div style={{ fontSize: '1.15rem', fontWeight: 700, color, textShadow: `0 0 10px ${color}88` }}>{value}</div>
+    </div>
+  );
+  return (
+    <header style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', direction: dir, padding: '0.6rem 1rem', borderRadius: 16, background: 'linear-gradient(90deg, rgba(30,58,95,0.55), rgba(15,23,42,0.4))', border: '1px solid rgba(148,163,184,0.18)', backdropFilter: 'blur(12px)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#22d3ee,#3b82f6 55%,#8b5cf6)', display: 'grid', placeItems: 'center', fontWeight: 900, color: '#fff', fontSize: 20, boxShadow: '0 0 18px rgba(59,130,246,0.6)' }}>A</div>
+        <div>
+          <div style={{ fontWeight: 900, letterSpacing: '0.18em', fontSize: '1.05rem', background: 'linear-gradient(90deg,#e0f2fe,#93c5fd)', WebkitBackgroundClip: 'text', color: 'transparent' }}>ASADRA</div>
+          <h1 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#cbd5e1' }}>
+            {t.twin.title} — {locale === 'en' && dto.siteNameEn ? dto.siteNameEn : dto.siteName}
+          </h1>
+        </div>
+      </div>
+      <div style={{ flex: 1 }} />
+      {kpi(he ? 'נקודות CCP תקינות' : 'CCPs OK', `${ok}/${ccps.length}`, ok === ccps.length ? '#22c55e' : '#ef4444')}
+      {kpi(he ? 'חריגות פתוחות' : 'Open deviations', String(open), open ? '#ef4444' : '#22c55e')}
+      {kpi(he ? 'שלמות שרשרת' : 'Chain integrity', dto.chainResult.valid ? (he ? 'מאומתת ✓' : 'Verified ✓') : (he ? 'שבורה' : 'Broken'), dto.chainResult.valid ? '#22d3ee' : '#f59e0b')}
+      <div style={{ textAlign: 'center', minWidth: 110 }}>
+        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: '1.25rem', color: '#e2e8f0', fontWeight: 700 }} suppressHydrationWarning>
+          {now ? now.toLocaleTimeString(he ? 'he-IL' : 'en-GB') : '--:--:--'}
+        </div>
+        <div style={{ fontSize: '0.7rem', color: liveMode ? '#22c55e' : '#94a3b8', letterSpacing: '0.1em' }}>
+          {liveMode ? '● LIVE' : '❚❚ PAUSED'}
+        </div>
+      </div>
+    </header>
+  );
 }
