@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, SoftShadows, Environment, ContactShadows } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
 import FactoryFloor from './factory-floor';
@@ -12,6 +13,7 @@ import FlowArrows from './flow-arrows';
 import SeparationOverlay from './separation-overlay';
 import Legend from './legend';
 import { GuidedTourCamera } from './guided-tour';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 interface TwinCanvasProps {
   dto: TwinDTO;
@@ -27,10 +29,11 @@ interface TwinCanvasProps {
 }
 
 /**
- * Main 3-D scene.
- * Loaded with dynamic({ ssr: false }) from twin-view.tsx.
- * frameloop="demand" for performance — OrbitControls invalidates on interaction.
- * Edit mode allows dragging station markers.
+ * Main 3-D scene — cinematic dark industrial look (Bob session 13).
+ * - Dark background #0b0f17, fog
+ * - Auto-rotates slowly until user interacts
+ * - Bloom + Vignette postprocessing
+ * - frameloop="always" while auto-rotating, "demand" after first interaction
  */
 export default function TwinCanvas({
   dto,
@@ -57,37 +60,56 @@ export default function TwinCanvas({
     [onStationMove],
   );
 
-  // Camera positioned to tightly frame the whole site
+  // Track whether the user has interacted (stops auto-rotate, switches to demand)
+  const [userInteracted, setUserInteracted] = useState(false);
+  const orbitRef = useRef<OrbitControlsImpl>(null);
+
+  // Camera at ~40° angle, closer framing
   const cx = dto.siteWidth / 2;
   const cz = dto.siteDepth / 2;
-  const camDist = Math.max(dto.siteWidth, dto.siteDepth) * 0.9;
-  const camY = camDist * 0.65;
-  const camZ = cz + camDist * 0.8;
+  const camDist = Math.max(dto.siteWidth, dto.siteDepth) * 0.65;
+  const camY = camDist * 0.85; // ~40° elevation (arctan 0.85 ≈ 40°)
+  const camZ = cz + camDist * 0.6;
+
+  // Auto-rotate active until user interacts
+  const autoRotate = !userInteracted && !editMode && !tourActive;
+  // frameloop="always" while auto-rotating or in edit/tour; otherwise "demand"
+  const frameloop: 'always' | 'demand' = editMode || tourActive || autoRotate ? 'always' : 'demand';
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '700px' }}>
       <Canvas
-        frameloop={editMode || tourActive ? 'always' : 'demand'}
+        frameloop={frameloop}
         shadows
         camera={{
-          position: [cx - dto.siteWidth * 0.15, camY, camZ],
-          fov: 45,
+          position: [cx - dto.siteWidth * 0.1, camY, camZ],
+          fov: 40,
           near: 0.1,
           far: 500,
         }}
-        style={{ background: '#1a2235', borderRadius: '10px' }}
+        style={{ background: '#0b0f17', borderRadius: '10px' }}
         gl={{ antialias: true }}
+        onPointerDown={() => {
+          if (!userInteracted) setUserInteracted(true);
+        }}
       >
-        {/* ── Environment (warehouse HDRI — no external download, uses drei's built-in preset) ── */}
-        <Environment preset="warehouse" />
+        {/* ── Fog for atmospheric depth ────────────────────────────────── */}
+        <fog attach="fog" args={['#0b0f17', 40, 160]} />
 
-        {/* ── Hemisphere sky/ground ambient ── */}
-        <hemisphereLight args={['#d8e8f5', '#4a4030', 0.55]} />
+        {/* ── Dark warehouse environment (ambient reflections) ─────────── */}
+        <Environment preset="night" />
 
-        {/* ── Key directional light with soft shadows ── */}
+        {/* ── Dim ambient — keeps scene readable in dark mode ─────────── */}
+        <ambientLight intensity={0.08} />
+
+        {/* ── Hemisphere sky/ground — very dark industrial ────────────── */}
+        <hemisphereLight args={['#1a2a3a', '#0a0d14', 0.3]} />
+
+        {/* ── Cool key directional light — industrial overhead ────────── */}
         <directionalLight
           position={[dto.siteWidth * 0.6, 25, dto.siteDepth * 0.7]}
-          intensity={1.8}
+          intensity={0.9}
+          color="#b0c8e8"
           castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-camera-near={0.5}
@@ -99,51 +121,41 @@ export default function TwinCanvas({
           shadow-bias={-0.0005}
         />
 
-        {/* ── Fill light from opposite side ── */}
+        {/* ── Dim fill from opposite side ─────────────────────────────── */}
         <directionalLight
           position={[-dto.siteWidth * 0.4, 12, -dto.siteDepth * 0.4]}
-          intensity={0.4}
+          intensity={0.15}
+          color="#203040"
         />
 
-        {/* ── Warm overhead fill (factory ceiling lights feel) ── */}
-        <pointLight position={[cx, 8, cz]} intensity={0.8} distance={40} decay={1.5} />
-
-        {/* ── Soft shadow helper (PCF) ── */}
-        <SoftShadows samples={16} focus={0.6} size={25} />
-
-        {/* ── Contact shadows on the floor for grounding ── */}
-        <ContactShadows
-          position={[cx, 0.01, cz]}
-          width={dto.siteWidth * 1.1}
-          height={dto.siteDepth * 1.1}
-          far={10}
-          blur={1.5}
-          opacity={0.4}
-          frames={1}
-        />
-
-        {/* ── Guided tour camera lerp ── */}
+        {/* ── Guided tour camera lerp ───────────────────────────────────── */}
         {tourActive && <GuidedTourCamera />}
 
-        {/* ── OrbitControls — invalidates canvas on interaction ── */}
+        {/* ── OrbitControls — auto-rotates until user interacts ─────────── */}
         <OrbitControls
+          ref={orbitRef}
           target={[cx, 0, cz]}
           enableDamping
           dampingFactor={0.08}
           minDistance={4}
-          maxDistance={100}
+          maxDistance={120}
           maxPolarAngle={Math.PI / 2.05}
+          autoRotate={autoRotate}
+          autoRotateSpeed={0.4}
+          onStart={() => {
+            if (!userInteracted) setUserInteracted(true);
+          }}
         />
 
-        {/* ── Factory floor (concrete, walls, partitions, safety lines, signs) ── */}
+        {/* ── Factory floor (dark epoxy, walls, emissive outlines) ─────── */}
         <FactoryFloor widthM={dto.siteWidth} depthM={dto.siteDepth} zones={dto.zones} />
 
-        {/* ── Zones (hygiene overlays + labels — kept for separation overlay context) ── */}
+        {/* ── Zones (kept for separation overlay context) ──────────────── */}
         {dto.zones.map((zone) => (
           <ZoneMesh key={zone.id} zone={zone} locale={locale} />
         ))}
 
-        {/* ── Station markers (realistic equipment models) ── */}
+        {/* ── Station markers (3x scale equipment models) ──────────────── */}
         {dto.stations.map((station) => (
           <StationMarker
             key={station.id}
@@ -155,10 +167,10 @@ export default function TwinCanvas({
           />
         ))}
 
-        {/* ── Flow arrows ── */}
+        {/* ── Flow arrows (emissive bright cyan for bloom glow) ────────── */}
         {showFlow && <FlowArrows segments={dto.flowSegments} />}
 
-        {/* ── Separation overlay ── */}
+        {/* ── Separation overlay ────────────────────────────────────────── */}
         {showSeparation && (
           <SeparationOverlay
             issues={dto.separationIssues}
@@ -166,6 +178,17 @@ export default function TwinCanvas({
             locale={locale}
           />
         )}
+
+        {/* ── Post-processing: Bloom + Vignette ────────────────────────── */}
+        <EffectComposer>
+          <Bloom
+            luminanceThreshold={0.35}
+            luminanceSmoothing={0.4}
+            intensity={1.2}
+            mipmapBlur
+          />
+          <Vignette eskil={false} offset={0.35} darkness={0.7} />
+        </EffectComposer>
       </Canvas>
 
       {/* Legend overlay */}

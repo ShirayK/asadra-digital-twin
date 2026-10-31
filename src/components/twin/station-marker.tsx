@@ -18,18 +18,18 @@ interface StationMarkerProps {
   onMove?: (id: string, x: number, z: number) => void;
 }
 
-/** Visual height of the equipment model (used to position status ring and label above it) */
+/** Visual height of the equipment model at 3x scale (used to position status ring and label above it) */
 const HEIGHT_BY_TYPE: Record<string, number> = {
-  CCP: 1.6,
-  CP: 1.3,
-  PRP: 1.1,
+  CCP: 4.8,
+  CP: 3.9,
+  PRP: 3.3,
 };
 
-/** Radius used for the status ring */
+/** Radius used for the status ring at 3x scale */
 const RING_RADIUS: Record<string, number> = {
-  CCP: 0.65,
-  CP: 0.55,
-  PRP: 0.45,
+  CCP: 1.95,
+  CP: 1.65,
+  PRP: 1.35,
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,10 +58,10 @@ function StatusRing({
       <torusGeometry args={[radius, 0.09, 8, 32]} />
       <meshStandardMaterial
         color={color}
-        roughness={0.2}
-        metalness={0.3}
+        roughness={0.1}
+        metalness={0.2}
         emissive={color}
-        emissiveIntensity={pulse ? 0.7 : 0.15}
+        emissiveIntensity={pulse ? 2.5 : 1.2}
       />
     </mesh>
   );
@@ -187,11 +187,11 @@ export default function StationMarker({
         </mesh>
       )}
 
-      {/* Realistic procedural equipment model */}
+      {/* Realistic procedural equipment model — 3x scale to dominate the floor */}
       <EquipmentModel
         modelType={modelType}
         controlType={station.controlType}
-        scale={1}
+        scale={3}
       />
 
       {/* Status ring above equipment */}
@@ -203,37 +203,42 @@ export default function StationMarker({
         ringRef={ringRef}
       />
 
-      {/* Always-visible label */}
+      {/* Always-visible label — compact dark glass card */}
       <Html
         center
-        position={[0, height + 0.75, 0]}
-        distanceFactor={14}
+        position={[0, height + 1.2, 0]}
+        distanceFactor={22}
         style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
         <div
           style={{
-            background: 'rgba(15,23,42,0.85)',
-            color: '#f1f5f9',
-            fontSize: '12px',
+            background: 'rgba(8,12,24,0.88)',
+            color: '#e2e8f0',
+            fontSize: '11px',
             fontWeight: 600,
-            padding: '3px 8px',
-            borderRadius: '4px',
+            padding: '3px 7px',
+            borderRadius: '5px',
             whiteSpace: 'nowrap',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '2px',
-            border: `1.5px solid ${color}`,
+            border: `1px solid ${color}55`,
+            backdropFilter: 'blur(4px)',
+            boxShadow: `0 0 8px ${color}44`,
           }}
         >
-          <span>{station.name}</span>
+          <span style={{ letterSpacing: '0.02em' }}>{station.name}</span>
           <span
             style={{
-              background: color,
+              background: `${color}22`,
+              border: `1px solid ${color}88`,
+              color: color,
               padding: '1px 5px',
               borderRadius: '3px',
-              fontSize: '10px',
+              fontSize: '9px',
               fontWeight: 700,
+              letterSpacing: '0.05em',
             }}
           >
             {station.controlType} · {t.status[station.status as keyof typeof t.status]}

@@ -56,8 +56,8 @@ function AnimatedFlowLine({ segment }: { segment: FlowSegment }) {
     <Line
       ref={lineRef}
       points={points}
-      color="#60a5fa"
-      lineWidth={2}
+      color="#38bdf8"
+      lineWidth={3}
       dashed
       dashSize={0.4}
       gapSize={0.25}
