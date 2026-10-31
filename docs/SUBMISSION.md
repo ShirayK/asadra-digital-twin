@@ -20,13 +20,14 @@ This is a standalone 3D digital twin of the production floor:
 - Automatic separation checks flag two risks: RAW→HIGH_CARE without a kill step, and allergen cross-contact (e.g. sesame).
 - Clicking a station opens a side panel with the last 5 readings, the corrective action, and a SHA-256 hash-chain integrity badge.
 - A layout editor supports drag and drop, with JSON export and import.
-- A guided camera tour walks through the process steps in order.
+- A guided camera tour walks through the process steps in order, showing critical limits, monitoring frequency and corrective actions (in English on /en).
+- A live simulator streams readings every 3 s. A header shows a live clock and KPIs: CCPs in range, open deviations, and hash-chain integrity.
 - Hebrew (RTL, default) and English.
 
-The demo dataset is a hummus plant. Its cooling CCP reads 9 °C, which is out of range, and it has a sesame cross-contact zone.
+The demo dataset is a hummus plant. In live mode its cooling CCP drifts above the 5 °C critical limit and raises a breach alert. The plant also has a sesame cross-contact zone.
 
 ### How IBM Bob was used
-All feature code was written in **IBM Bob IDE Task Sessions**, one session per prompt in `docs/SPEC.md`, on the hackathon team instance (ibm-coding-challenge-2, us-east). Each session's summary screenshot is in `bob_sessions/`.
+The core app was written in 15 **IBM Bob IDE Task Sessions** (0–14): sessions 0–11 follow the prompts in `docs/SPEC.md` one by one, and sessions 12–14 add the equipment, the cinematic look and the live simulator. Everything after session 14 was done by hand (listed below). The sessions ran on the hackathon team instance (ibm-coding-challenge-2, us-east). Each session's summary screenshot is in `bob_sessions/`.
 
 | # | Bob session | Commit |
 |---|-------------|--------|
@@ -46,9 +47,11 @@ All feature code was written in **IBM Bob IDE Task Sessions**, one session per p
 | 13 | Cinematic dark industrial look with bloom | `3aa3a6c` |
 | 14 | Live CCP simulator, breach toast, English names, compact labels, camera fit. The session hit the team's 50-Bobcoin budget before it could commit, so the code it wrote was committed by hand | `36bcf38` |
 
-**Manual fixes (not in Bob, made after the Bobcoins ran out):**
+**Manual work (not in Bob, done by hand after session 14 used up the Bobcoin budget):**
 - `d2610c1`: pinned @react-three/postprocessing 2.x so it works with fiber 8 (the page crashed without it).
 - `d6a8b07`: breach threshold now matches the seed's 5 °C limit (before, the toast fired at 4.1 °C); the side panel refreshes live and shows English labels; analytic camera framing instead of drei Bounds; app opens in Live mode; decorative racks, pallets, pipes and conveyor.
+- `c5df2dc`: round-3 UI polish: dark glass theme, a header with logo, live clock and KPI strip (CCPs OK, open deviations, chain integrity), English guided tour on /en, simulator cycles (cooling breaches again about 45 s after a corrective action, and the cooking CCP briefly goes STALE every minute; 2 new tests), more detailed equipment (ladders, gauges, chiller fans, packaging conveyor with moving rollers), worker figures, thicker glowing pipes with flow pulses, compact zone tags, a bold separation overlay (glowing dashed path, warning beacon, badge) and a 3 s camera fly-in on load.
+- Final polish commit: the two separation badges are offset so both can be read, and the worker figures are larger.
 
 Screenshot commits: `28384d4`, `91110d7`, `a5f48d5`, `dd497e2`, `04f6cf4`.
 
@@ -56,7 +59,7 @@ Screenshot commits: `28384d4`, `91110d7`, `a5f48d5`, `dd497e2`, `04f6cf4`.
 1. Open https://asadra-digital-twin.vercel.app/en/twin. The app opens in **Live** mode: every station reads fresh simulated data and shows a green ring.
 2. Wait about 10–20 s. The **Cooling (CCP)** temperature drifts past its 5 °C critical limit. Its ring turns red and pulses, and a red **CCP breach** toast appears.
 3. Click the Cooling station (3D or chip) to open the side panel: last 5 readings, with out-of-range values in red, and the limits.
-4. Click **✓ Apply corrective action**. The cooling CCP is reset to 3 °C, the toast closes and the ring turns green again.
+4. Click **✓ Apply corrective action**. The cooling CCP is reset to 3 °C, the toast closes and the ring turns green again. The header KPIs update live. If you keep watching, cooling drifts and breaches again about 45 s later, and the cooking CCP sometimes shows STALE for a few seconds (a simulated sensor dropout).
 5. **Live / Paused** toggles the simulation. Also try **Separation check** (raw→high-care and sesame cross-contact), **Edit mode** (drag stations), **Guided tour**, and the **עב/EN** switch.
 
 ### Run locally
@@ -92,10 +95,11 @@ No environment variables or API keys are needed. The data comes from `data/seed/
 - לחיצה על תחנה פותחת פאנל צד עם 5 הקריאות האחרונות, הפעולה המתקנת, ותג שלמות של שרשרת SHA-256.
 - עורך פריסה עם גרירה, ייצוא וייבוא JSON.
 - סיור מודרך במצלמה.
+- סימולציה חיה: הקירור חורג, פעולה מתקנת מחזירה אותו לטווח, והוא חורג שוב כעבור כ-45 שניות. כותרת עם שעון ומדדי KPI.
 - עברית (RTL) ואנגלית.
 
 ### איך השתמשנו ב-IBM Bob
-כל קוד הפיצ'רים נכתב ב-**Bob IDE Task Sessions**: 15 סשנים (0–14) בחשבון ההאקתון (us-east): 0–11 לפי הפרומפטים ב-`docs/SPEC.md`, ו-12–14 לשדרוג המראה ולסימולציה החיה. סשן 14 נעצר כשנגמר תקציב 50 ה-Bobcoins, לפני הקומיט. אחריו נעשו תיקונים ידניים קטנים (`d2610c1`, `d6a8b07`). צילומי הסיכום נמצאים ב-`bob_sessions/`, וטבלת הקומיטים מופיעה למעלה.
+כל קוד הפיצ'רים נכתב ב-**Bob IDE Task Sessions**: 15 סשנים (0–14) בחשבון ההאקתון (us-east): 0–11 לפי הפרומפטים ב-`docs/SPEC.md`, ו-12–14 לשדרוג המראה ולסימולציה החיה. סשן 14 נעצר כשנגמר תקציב 50 ה-Bobcoins, לפני הקומיט. כל מה שנעשה אחריו נעשה ידנית: תיקונים (`d2610c1`, `d6a8b07`), ליטוש עיצובי (`c5df2dc`): ערכת עיצוב כהה, כותרת עם מדדי KPI ושעון, סיור באנגלית, מחזורי חריגה חוזרים, ציוד ועובדים מפורטים, שכבת הפרדה בולטת ומעוף מצלמה בפתיחה, וליטוש אחרון. צילומי הסיכום נמצאים ב-`bob_sessions/`, וטבלת הקומיטים מופיעה למעלה.
 
 ### איך מדגימים
 פותחים את /he/twin. האפליקציה נפתחת במצב חי, ותוך 10–20 שניות ה-CCP של הקירור חורג מ-5°C: הטבעת מהבהבת באדום ומופיעה התראה. לוחצים "בצע פעולה מתקנת" והתחנה חוזרת לירוק. הכפתור חי/מושהה עוצר את הסימולציה.

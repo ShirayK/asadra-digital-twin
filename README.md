@@ -18,6 +18,7 @@ Features:
 - **Side panel** — station name, type, last 5 readings, out-of-range highlights, corrective action, hash badge
 - **Layout editor** — drag stations, auto-save to localStorage, Export/Import JSON, Reset
 - **Guided tour** — camera walk-through of all process steps in order
+- **Live simulator + KPI header** — readings every 3 s, cooling breach → corrective action → breach again, brief STALE dropouts; live clock and KPI strip
 - **i18n** — Hebrew RTL (default) and English
 - **Empty state** — clear message when no dataset is loaded
 
@@ -76,7 +77,7 @@ src/adapters/           # TwinDataSource interface + JSON / localStorage impls
 src/app/[locale]/       # Next.js pages (server components load + validate data)
 src/components/twin/    # React / R3F client components
 src/i18n/               # Locale dictionaries (he = Hebrew RTL, en = English)
-tests/domain/           # Vitest unit tests (97 tests)
+tests/domain/           # Vitest unit tests (99 tests)
 bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–14)
 docs/                   # SPEC.md · INTEGRATION.md
 ```
@@ -146,13 +147,15 @@ All UI strings are in `src/i18n/{he,en}.json` — both files must have identical
 | 13 | Cinematic dark industrial look with bloom | `3aa3a6c` |
 | 14 | Live CCP simulator, breach toast, English names, compact labels, camera fit. The session hit the team's 50-Bobcoin budget before it could commit, so the code it wrote was committed by hand | `36bcf38` |
 
-**Manual fixes (not in Bob, made after the Bobcoins ran out):**
+**Manual work (not in Bob, done by hand after session 14 used up the Bobcoin budget):**
 - `d2610c1`: pinned @react-three/postprocessing 2.x so it works with fiber 8 (the page crashed without it).
 - `d6a8b07`: breach threshold now matches the seed's 5 °C limit (before, the toast fired at 4.1 °C); the side panel refreshes live and shows English labels; analytic camera framing instead of drei Bounds; app opens in Live mode; decorative racks, pallets, pipes and conveyor.
+- `c5df2dc`: round-3 UI polish: dark glass theme, a header with logo, live clock and KPI strip (CCPs OK, open deviations, chain integrity), English guided tour on /en, simulator cycles (cooling breaches again about 45 s after a corrective action, and the cooking CCP briefly goes STALE every minute; 2 new tests), more detailed equipment (ladders, gauges, chiller fans, packaging conveyor with moving rollers), worker figures, thicker glowing pipes with flow pulses, compact zone tags, a bold separation overlay (glowing dashed path, warning beacon, badge) and a 3 s camera fly-in on load.
+- Final polish commit: the two separation badges are offset so both can be read, and the worker figures are larger.
 
 ### How to demo (about 60 seconds)
 1. Open https://asadra-digital-twin.vercel.app/en/twin. The app opens in **Live** mode: every station reads fresh simulated data and shows a green ring.
 2. Wait about 10–20 s. The **Cooling (CCP)** temperature drifts past its 5 °C critical limit. Its ring turns red and pulses, and a red **CCP breach** toast appears.
 3. Click the Cooling station (3D or chip) to open the side panel: last 5 readings, with out-of-range values in red, and the limits.
-4. Click **✓ Apply corrective action**. The cooling CCP is reset to 3 °C, the toast closes and the ring turns green again.
+4. Click **✓ Apply corrective action**. The cooling CCP is reset to 3 °C, the toast closes and the ring turns green again. The header KPIs update live. If you keep watching, cooling drifts and breaches again about 45 s later, and the cooking CCP sometimes shows STALE for a few seconds (a simulated sensor dropout).
 5. **Live / Paused** toggles the simulation. Also try **Separation check** (raw→high-care and sesame cross-contact), **Edit mode** (drag stations), **Guided tour**, and the **עב/EN** switch.

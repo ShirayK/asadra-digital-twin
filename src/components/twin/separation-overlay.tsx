@@ -54,7 +54,7 @@ export default function SeparationOverlay({
   return (
     <>
       {resolved.map((ri, i) => (
-        <IssueSegment key={i} resolved={ri} locale={locale} />
+        <IssueSegment key={i} index={i} resolved={ri} locale={locale} />
       ))}
     </>
   );
@@ -67,7 +67,9 @@ let cameraTarget: { pos: THREE.Vector3; look: THREE.Vector3 } | null = null;
 function IssueSegment({
   resolved,
   locale,
+  index = 0,
 }: {
+  index?: number;
   resolved: ResolvedIssue;
   locale: Locale;
 }) {
@@ -163,7 +165,7 @@ function IssueSegment({
           <meshBasicMaterial color="#ef4444" toneMapped={false} />
         </mesh>
       </group>
-      <Html position={[mid.x, 3.9, mid.z]} center distanceFactor={16} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+      <Html position={[mid.x, 3.9 + index * 1.3, mid.z]} center distanceFactor={16} style={{ pointerEvents: 'none', userSelect: 'none' }}>
         <div style={{ background: 'rgba(127,29,29,0.9)', border: '1px solid #ef4444', color: '#fff', fontSize: '12px', fontWeight: 800, padding: '2px 9px', borderRadius: 999, whiteSpace: 'nowrap', boxShadow: '0 0 14px rgba(239,68,68,0.8)' }}>
           ⚠ {tooltipText}{allergenSuffix}
         </div>

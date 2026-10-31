@@ -57,7 +57,7 @@ export function WorkerFigure({ position, color = '#f8fafc', phase = 0 }: { posit
     }
   });
   return (
-    <group ref={ref} position={position} scale={1.7}>
+    <group ref={ref} position={position} scale={3.05}>
       <mesh castShadow position={[0, 0.48, 0]}>
         <capsuleGeometry args={[0.13, 0.42, 6, 12]} />
         <meshStandardMaterial color={color} roughness={0.7} />
