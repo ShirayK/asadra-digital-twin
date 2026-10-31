@@ -16,6 +16,8 @@ interface StationMarkerProps {
   editMode?: boolean;
   onClick: (station: StationDTO) => void;
   onMove?: (id: string, x: number, z: number) => void;
+  /** When true, suppress the 3-D label (used to hide equipment sub-labels) */
+  hideLabel?: boolean;
 }
 
 /** Visual height of the equipment model at 3x scale (used to position status ring and label above it) */
@@ -77,6 +79,7 @@ export default function StationMarker({
   editMode = false,
   onClick,
   onMove,
+  hideLabel = false,
 }: StationMarkerProps) {
   const t = getDictionary(locale);
   const ringRef = useRef<Mesh>(null!);
@@ -203,48 +206,49 @@ export default function StationMarker({
         ringRef={ringRef}
       />
 
-      {/* Always-visible label — compact dark glass card */}
-      <Html
-        center
-        position={[0, height + 1.2, 0]}
-        distanceFactor={22}
-        style={{ pointerEvents: 'none', userSelect: 'none' }}
-      >
-        <div
-          style={{
-            background: 'rgba(8,12,24,0.88)',
-            color: '#e2e8f0',
-            fontSize: '11px',
-            fontWeight: 600,
-            padding: '3px 7px',
-            borderRadius: '5px',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px',
-            border: `1px solid ${color}55`,
-            backdropFilter: 'blur(4px)',
-            boxShadow: `0 0 8px ${color}44`,
-          }}
+      {/* Compact single label: name + status dot, offset well above the ring */}
+      {!hideLabel && (
+        <Html
+          center
+          position={[0, height + 2.0, 0]}
+          distanceFactor={22}
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
-          <span style={{ letterSpacing: '0.02em' }}>{station.name}</span>
-          <span
+          <div
             style={{
-              background: `${color}22`,
-              border: `1px solid ${color}88`,
-              color: color,
-              padding: '1px 5px',
-              borderRadius: '3px',
-              fontSize: '9px',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
+              background: 'rgba(8,12,24,0.88)',
+              color: '#e2e8f0',
+              fontSize: '11px',
+              fontWeight: 600,
+              padding: '3px 8px',
+              borderRadius: '5px',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              border: `1px solid ${color}55`,
+              backdropFilter: 'blur(4px)',
+              boxShadow: `0 0 8px ${color}44`,
             }}
           >
-            {station.controlType} · {t.status[station.status as keyof typeof t.status]}
-          </span>
-        </div>
-      </Html>
+            {/* Status dot */}
+            <span
+              style={{
+                display: 'inline-block',
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: color,
+                flexShrink: 0,
+              }}
+            />
+            {/* Station name (English if available and locale is en) */}
+            <span style={{ letterSpacing: '0.02em' }}>
+              {locale === 'en' && station.nameEn ? station.nameEn : station.name}
+            </span>
+          </div>
+        </Html>
+      )}
     </group>
   );
 }

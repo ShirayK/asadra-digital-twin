@@ -10,9 +10,11 @@ interface TwinToolbarProps {
   showSeparation: boolean;
   issueCount: number;
   editMode: boolean;
+  liveMode: boolean;
   onToggleFlow: () => void;
   onToggleSeparation: () => void;
   onToggleEdit: () => void;
+  onToggleLive: () => void;
   onReset: () => void;
   onExport: () => void;
   onImport: () => void;
@@ -29,9 +31,11 @@ export default function TwinToolbar({
   showSeparation,
   issueCount,
   editMode,
+  liveMode,
   onToggleFlow,
   onToggleSeparation,
   onToggleEdit,
+  onToggleLive,
   onReset,
   onExport,
   onImport,
@@ -88,6 +92,16 @@ export default function TwinToolbar({
             {issueCount}
           </span>
         )}
+      </button>
+
+      {/* Live / Pause toggle */}
+      <button
+        onClick={onToggleLive}
+        aria-pressed={liveMode}
+        style={toggleStyle(liveMode, '#22c55e', '#f0fdf4', '#166534')}
+      >
+        <span style={{ fontSize: '0.8rem' }}>{liveMode ? '⏸' : '▶'}</span>
+        {liveMode ? 'Live' : 'Paused'}
       </button>
 
       {/* Separator */}

@@ -37,6 +37,7 @@ export type Allergen = z.infer<typeof AllergenSchema>;
 export const ZoneSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  nameEn: z.string().optional(),
   hygieneClass: ZoneHygieneClassSchema,
   x: z.number(),
   z: z.number(),
@@ -60,6 +61,7 @@ export type StationField = z.infer<typeof StationFieldSchema>;
 export const StationSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  nameEn: z.string().optional(),
   controlType: ControlTypeSchema,
   position: z.object({
     x: z.number(),
@@ -121,6 +123,7 @@ export type Reading = z.infer<typeof ReadingSchema>;
 export const SiteSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  nameEn: z.string().optional(),
   widthM: z.number().positive(),
   depthM: z.number().positive(),
   tenantRef: z.string().optional(),

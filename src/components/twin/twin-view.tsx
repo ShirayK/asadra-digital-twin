@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
@@ -12,6 +12,15 @@ import { TwinDatasetSchema } from '@/domain/schema';
 import { getStationStatus } from '@/domain/status';
 import { buildFlowPaths } from '@/domain/flow';
 import { findSeparationIssues } from '@/domain/separation';
+import {
+  initSimulatorState,
+  tickSimulator,
+  applyCorrectiveAction,
+  TICK_MS,
+  COOLING_STATION_ID,
+  COOLING_LIMIT,
+} from '@/domain/simulator';
+import type { SimulatorState } from '@/domain/simulator';
 import SidePanel from './side-panel';
 import TwinToolbar from './twin-toolbar';
 import GuidedTourCard, { setTourTarget } from './guided-tour';
@@ -45,6 +54,16 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
 
   // Live DTO that may be updated by overlay or import
   const [liveDto, setLiveDto] = useState<TwinDTO>(baseDto);
+
+  // ── Simulator state (Session 14) ─────────────────────────────────────────
+  const [liveMode, setLiveMode] = useState(false);
+  const [simState, setSimState] = useState<SimulatorState | null>(null);
+  const [breachToast, setBreachToast] = useState<string | null>(null);
+  // Ref to track whether breach toast has been shown for the current drift cycle
+  const breachShownRef = useRef(false);
+  // Stable ref to latest simState for use in interval callback
+  const simStateRef = useRef<SimulatorState | null>(null);
+  simStateRef.current = simState;
 
   // Keep camera lerp target in sync with the active tour step
   useEffect(() => {
@@ -94,6 +113,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           return {
             id: s.id,
             name: s.name,
+            nameEn: s.nameEn,
             controlType: s.controlType,
             position: s.position,
             zoneId: s.zoneId,
@@ -143,6 +163,127 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     window.addEventListener('twin-import', handler);
     return () => window.removeEventListener('twin-import', handler);
   }, [liveDto.chainResult]);
+
+  // ── Simulator tick effect (Session 14) ───────────────────────────────────
+  useEffect(() => {
+    if (!liveMode) return;
+
+    // On first activation, initialise from baseDto dataset
+    if (!simStateRef.current) {
+      const stations = baseDto.stations.map((s) => ({
+        id: s.id,
+        name: s.name,
+        controlType: s.controlType,
+        position: s.position,
+        zoneId: s.zoneId,
+        fields: s.fields,
+      }));
+      const allReadings = baseDto.stations.flatMap((s) => s.lastReadings);
+      const initial = initSimulatorState({ stations, seedReadings: allReadings });
+      setSimState(initial);
+      simStateRef.current = initial;
+    }
+
+    const intervalId = setInterval(() => {
+      const prev = simStateRef.current;
+      if (!prev) return;
+
+      const stations = baseDto.stations.map((s) => ({
+        id: s.id,
+        name: s.name,
+        controlType: s.controlType,
+        position: s.position,
+        zoneId: s.zoneId,
+        fields: s.fields,
+      }));
+      const next = tickSimulator(prev, { stations, seedReadings: [] });
+      setSimState(next);
+
+      // Show breach toast once per drift-up cycle
+      if (next.coolingBreaching && !breachShownRef.current) {
+        breachShownRef.current = true;
+        const temp = next.coolingTemp.toFixed(1);
+        const coolingStation = baseDto.stations.find((s) => s.id === COOLING_STATION_ID);
+        const limitLabel = coolingStation?.fields.find((f) => f.key === 'temp')?.max ?? COOLING_LIMIT;
+        setBreachToast(`CCP breach: Cooling ${temp}°C > ${limitLabel}°C`);
+      }
+      if (!next.coolingBreaching) {
+        breachShownRef.current = false;
+      }
+
+      // Rebuild liveDto with simulated readings
+      const now = new Date();
+      const updatedStations: StationDTO[] = baseDto.stations.map((s) => {
+        const simReadings = (next.readings.get(s.id) ?? []).slice(0, 5);
+        const station = {
+          id: s.id,
+          name: s.name,
+          controlType: s.controlType,
+          position: s.position,
+          zoneId: s.zoneId,
+          fields: s.fields,
+        };
+        return {
+          ...s,
+          status: getStationStatus(station, simReadings[0] ?? null, now),
+          lastReadings: simReadings,
+        };
+      });
+      setLiveDto((prev) => ({ ...prev, stations: updatedStations }));
+    }, TICK_MS);
+
+    return () => clearInterval(intervalId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveMode, baseDto]);
+
+  const handleToggleLive = useCallback(() => {
+    setLiveMode((v) => {
+      if (v) {
+        // Pausing — reset sim state so next activation re-initialises
+        setSimState(null);
+        simStateRef.current = null;
+        breachShownRef.current = false;
+        setBreachToast(null);
+        // Restore base dto
+        const overlay = loadOverlay();
+        setLiveDto(
+          Object.keys(overlay.stationPositions).length > 0
+            ? applyOverlayToDto(baseDto, overlay)
+            : baseDto,
+        );
+      }
+      return !v;
+    });
+  }, [baseDto]);
+
+  const handleCorrectiveAction = useCallback(() => {
+    setBreachToast(null);
+    setSimState((prev) => {
+      if (!prev) return prev;
+      const fixed = applyCorrectiveAction(prev);
+      breachShownRef.current = false;
+      // Immediately update liveDto so the station goes green
+      const now = new Date();
+      const updatedStations: StationDTO[] = baseDto.stations.map((s) => {
+        const simReadings = (fixed.readings.get(s.id) ?? []).slice(0, 5);
+        const station = {
+          id: s.id,
+          name: s.name,
+          controlType: s.controlType,
+          position: s.position,
+          zoneId: s.zoneId,
+          fields: s.fields,
+        };
+        return {
+          ...s,
+          status: getStationStatus(station, simReadings[0] ?? null, now),
+          lastReadings: simReadings,
+        };
+      });
+      setLiveDto((prev) => ({ ...prev, stations: updatedStations }));
+      return fixed;
+    });
+  }, [baseDto]);
 
   const handleStationClick = useCallback(
     (station: StationDTO) => {
@@ -252,12 +393,14 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             showSeparation={showSeparation}
             issueCount={issueCount}
             editMode={editMode}
+            liveMode={liveMode}
             onToggleFlow={() => setShowFlow((v) => !v)}
             onToggleSeparation={() => setShowSeparation((v) => !v)}
             onToggleEdit={() => {
               setEditMode((v) => !v);
               setSelectedStation(null);
             }}
+            onToggleLive={handleToggleLive}
             onReset={handleReset}
             onExport={handleExport}
             onImport={handleImport}
@@ -355,6 +498,60 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           </div>
         )}
 
+        {/* ── Breach toast (Session 14) ──────────────────────────────────── */}
+        {breachToast && (
+          <div
+            role="alert"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.6rem 1rem',
+              background: '#fef2f2',
+              border: '2px solid #ef4444',
+              borderRadius: '6px',
+              fontSize: '0.9rem',
+              color: '#b91c1c',
+              fontWeight: 600,
+              animation: 'pulse 1s infinite',
+            }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>🚨</span>
+            <span style={{ flex: 1 }}>{breachToast}</span>
+            <button
+              onClick={handleCorrectiveAction}
+              style={{
+                padding: '0.3rem 0.8rem',
+                borderRadius: '4px',
+                border: '2px solid #ef4444',
+                background: '#ef4444',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ✓ Apply corrective action
+            </button>
+            <button
+              onClick={() => setBreachToast(null)}
+              aria-label="Dismiss"
+              style={{
+                padding: '0.2rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid #fca5a5',
+                background: 'transparent',
+                color: '#b91c1c',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Import error */}
         {importError && (
           <div
@@ -382,24 +579,27 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             direction: dir,
           }}
         >
-          {liveDto.stations.map((station) => (
-            <button
-              key={station.id}
-              onClick={() => !editMode && handleStationClick(station)}
-              style={{
-                padding: '0.25rem 0.75rem',
-                borderRadius: '4px',
-                background: statusColor(station.status),
-                color: '#fff',
-                fontWeight: 500,
-                border: selectedStation?.id === station.id ? '2px solid #fff' : '2px solid transparent',
-                cursor: editMode ? 'default' : 'pointer',
-              }}
-              title={`${station.name} — ${t.status[station.status as keyof typeof t.status]}`}
-            >
-              {station.name}
-            </button>
-          ))}
+          {liveDto.stations.map((station) => {
+            const displayName = locale === 'en' && station.nameEn ? station.nameEn : station.name;
+            return (
+              <button
+                key={station.id}
+                onClick={() => !editMode && handleStationClick(station)}
+                style={{
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '4px',
+                  background: statusColor(station.status),
+                  color: '#fff',
+                  fontWeight: 500,
+                  border: selectedStation?.id === station.id ? '2px solid #fff' : '2px solid transparent',
+                  cursor: editMode ? 'default' : 'pointer',
+                }}
+                title={`${displayName} — ${t.status[station.status as keyof typeof t.status]}`}
+              >
+                {displayName}
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Empty state ────────────────────────────────────────────────── */}

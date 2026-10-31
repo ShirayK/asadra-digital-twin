@@ -70,7 +70,7 @@ export default function ZoneMesh({ zone, locale }: ZoneMeshProps) {
               borderRadius: '3px',
             }}
           >
-            {zone.name}
+            {locale === 'en' && zone.nameEn ? zone.nameEn : zone.name}
           </span>
           <span
             style={{

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls, Environment, Bounds, useBounds } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
@@ -64,12 +64,15 @@ export default function TwinCanvas({
   const [userInteracted, setUserInteracted] = useState(false);
   const orbitRef = useRef<OrbitControlsImpl>(null);
 
-  // Camera at ~40° angle, closer framing
+  // Camera: compute a position that fits the whole plant in view
   const cx = dto.siteWidth / 2;
   const cz = dto.siteDepth / 2;
-  const camDist = Math.max(dto.siteWidth, dto.siteDepth) * 0.65;
-  const camY = camDist * 0.85; // ~40° elevation (arctan 0.85 ≈ 40°)
-  const camZ = cz + camDist * 0.6;
+  // Use the larger of width/depth to ensure the whole floor is visible
+  const plantSpan = Math.max(dto.siteWidth, dto.siteDepth);
+  // Distance chosen so the plant fills ~75% of the FOV (fov=40°, half = 20°)
+  const fitDist = (plantSpan / 2) / Math.tan((20 * Math.PI) / 180) * 1.15;
+  const camY = fitDist * 0.75;
+  const camZ = cz + fitDist * 0.65;
 
   // Auto-rotate active until user interacts
   const autoRotate = !userInteracted && !editMode && !tourActive;
@@ -82,7 +85,7 @@ export default function TwinCanvas({
         frameloop={frameloop}
         shadows
         camera={{
-          position: [cx - dto.siteWidth * 0.1, camY, camZ],
+          position: [cx, camY, camZ],
           fov: 40,
           near: 0.1,
           far: 500,
@@ -147,37 +150,18 @@ export default function TwinCanvas({
           }}
         />
 
-        {/* ── Factory floor (dark epoxy, walls, emissive outlines) ─────── */}
-        <FactoryFloor widthM={dto.siteWidth} depthM={dto.siteDepth} zones={dto.zones} />
-
-        {/* ── Zones (kept for separation overlay context) ──────────────── */}
-        {dto.zones.map((zone) => (
-          <ZoneMesh key={zone.id} zone={zone} locale={locale} />
-        ))}
-
-        {/* ── Station markers (3x scale equipment models) ──────────────── */}
-        {dto.stations.map((station) => (
-          <StationMarker
-            key={station.id}
-            station={station}
+        {/* ── Scene contents wrapped in Bounds for camera fit on load ──── */}
+        <Bounds fit clip observe margin={1.15}>
+          <SceneContents
+            dto={dto}
             locale={locale}
+            showFlow={showFlow}
+            showSeparation={showSeparation}
             editMode={editMode}
-            onClick={handleStationClick}
-            onMove={handleStationMove}
+            onStationClick={handleStationClick}
+            onStationMove={handleStationMove}
           />
-        ))}
-
-        {/* ── Flow arrows (emissive bright cyan for bloom glow) ────────── */}
-        {showFlow && <FlowArrows segments={dto.flowSegments} />}
-
-        {/* ── Separation overlay ────────────────────────────────────────── */}
-        {showSeparation && (
-          <SeparationOverlay
-            issues={dto.separationIssues}
-            flowSegments={dto.flowSegments}
-            locale={locale}
-          />
-        )}
+        </Bounds>
 
         {/* ── Post-processing: Bloom + Vignette ────────────────────────── */}
         <EffectComposer>
@@ -196,3 +180,73 @@ export default function TwinCanvas({
     </div>
   );
 }
+
+// ── SceneContents ─────────────────────────────────────────────────────────────
+// Rendered inside <Bounds> so drei can measure the bounding box and fit the
+// camera on mount.
+
+interface SceneContentsProps {
+  dto: TwinDTO;
+  locale: Locale;
+  showFlow: boolean;
+  showSeparation: boolean;
+  editMode: boolean;
+  onStationClick: (station: StationDTO) => void;
+  onStationMove: (id: string, x: number, z: number) => void;
+}
+
+function SceneContents({
+  dto,
+  locale,
+  showFlow,
+  showSeparation,
+  editMode,
+  onStationClick,
+  onStationMove,
+}: SceneContentsProps) {
+  // Fit the camera to the scene on mount only
+  const bounds = useBounds();
+  const didFit = useRef(false);
+  if (!didFit.current) {
+    didFit.current = true;
+    // Schedule after first render so geometry is measured
+    requestAnimationFrame(() => bounds.refresh().fit());
+  }
+
+  return (
+    <>
+      {/* ── Factory floor (dark epoxy, walls, emissive outlines) ──────── */}
+      <FactoryFloor widthM={dto.siteWidth} depthM={dto.siteDepth} zones={dto.zones} />
+
+      {/* ── Zones (kept for separation overlay context) ────────────────── */}
+      {dto.zones.map((zone) => (
+        <ZoneMesh key={zone.id} zone={zone} locale={locale} />
+      ))}
+
+      {/* ── Station markers (3x scale equipment models) ────────────────── */}
+      {dto.stations.map((station) => (
+        <StationMarker
+          key={station.id}
+          station={station}
+          locale={locale}
+          editMode={editMode}
+          onClick={onStationClick}
+          onMove={onStationMove}
+        />
+      ))}
+
+      {/* ── Flow arrows (emissive bright cyan for bloom glow) ──────────── */}
+      {showFlow && <FlowArrows segments={dto.flowSegments} />}
+
+      {/* ── Separation overlay ──────────────────────────────────────────── */}
+      {showSeparation && (
+        <SeparationOverlay
+          issues={dto.separationIssues}
+          flowSegments={dto.flowSegments}
+          locale={locale}
+        />
+      )}
+    </>
+  );
+}
+

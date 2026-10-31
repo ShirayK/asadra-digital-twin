@@ -13,6 +13,8 @@ export const dynamic = 'force-dynamic';
 export interface StationDTO {
   id: string;
   name: string;
+  /** English name, optional — present when nameEn is set in seed data */
+  nameEn?: string;
   controlType: Station['controlType'];
   position: { x: number; z: number; rotationY?: number };
   zoneId?: string;
@@ -38,6 +40,8 @@ export interface TourStep {
 
 export interface TwinDTO {
   siteName: string;
+  /** English site name */
+  siteNameEn?: string;
   siteWidth: number;
   siteDepth: number;
   zones: Zone[];
@@ -86,6 +90,7 @@ export default async function TwinPage({ params }: { params: { locale: string } 
     return {
       id: station.id,
       name: station.name,
+      nameEn: station.nameEn,
       controlType: station.controlType,
       position: station.position,
       zoneId: station.zoneId,
@@ -127,6 +132,7 @@ export default async function TwinPage({ params }: { params: { locale: string } 
 
   const dto: TwinDTO = {
     siteName: dataset.site.name,
+    siteNameEn: dataset.site.nameEn,
     siteWidth: dataset.site.widthM,
     siteDepth: dataset.site.depthM,
     zones: dataset.zones,
@@ -154,7 +160,7 @@ export default async function TwinPage({ params }: { params: { locale: string } 
           margin: 0,
         }}
       >
-        {t.twin.title} — {dto.siteName}
+        {t.twin.title} — {locale === 'en' && dto.siteNameEn ? dto.siteNameEn : dto.siteName}
       </h1>
 
       <TwinView dto={dto} locale={locale} />
