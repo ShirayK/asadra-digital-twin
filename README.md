@@ -76,8 +76,8 @@ src/adapters/           # TwinDataSource interface + JSON / localStorage impls
 src/app/[locale]/       # Next.js pages (server components load + validate data)
 src/components/twin/    # React / R3F client components
 src/i18n/               # Locale dictionaries (he = Hebrew RTL, en = English)
-tests/domain/           # Vitest unit tests (87 tests across 9 files)
-bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–11)
+tests/domain/           # Vitest unit tests (97 tests)
+bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–14)
 docs/                   # SPEC.md · INTEGRATION.md
 ```
 
@@ -136,3 +136,23 @@ All UI strings are in `src/i18n/{he,en}.json` — both files must have identical
 ---
 
 *Made with IBM Bob IDE · IBM Bob Israel Hackathon 2026*
+
+## Built with IBM Bob
+
+| # | Bob session | Commit |
+|---|---|---|
+| 0–11 | Spec prompts 0–11 (scaffold → QA); see docs/SUBMISSION.md | `646297b`…`4a06dce` |
+| 12 | Realistic factory equipment, building, lighting | `214ec77` |
+| 13 | Cinematic dark industrial look with bloom | `3aa3a6c` |
+| 14 | Live CCP simulator, breach toast, English names, compact labels, camera fit. The session hit the team's 50-Bobcoin budget before it could commit, so the code it wrote was committed by hand | `36bcf38` |
+
+**Manual fixes (not in Bob, made after the Bobcoins ran out):**
+- `d2610c1`: pinned @react-three/postprocessing 2.x so it works with fiber 8 (the page crashed without it).
+- `d6a8b07`: breach threshold now matches the seed's 5 °C limit (before, the toast fired at 4.1 °C); the side panel refreshes live and shows English labels; analytic camera framing instead of drei Bounds; app opens in Live mode; decorative racks, pallets, pipes and conveyor.
+
+### How to demo (about 60 seconds)
+1. Open https://asadra-digital-twin.vercel.app/en/twin. The app opens in **Live** mode: every station reads fresh simulated data and shows a green ring.
+2. Wait about 10–20 s. The **Cooling (CCP)** temperature drifts past its 5 °C critical limit. Its ring turns red and pulses, and a red **CCP breach** toast appears.
+3. Click the Cooling station (3D or chip) to open the side panel: last 5 readings, with out-of-range values in red, and the limits.
+4. Click **✓ Apply corrective action**. The cooling CCP is reset to 3 °C, the toast closes and the ring turns green again.
+5. **Live / Paused** toggles the simulation. Also try **Separation check** (raw→high-care and sesame cross-contact), **Edit mode** (drag stations), **Guided tour**, and the **עב/EN** switch.

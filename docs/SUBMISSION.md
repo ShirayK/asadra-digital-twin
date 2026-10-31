@@ -42,8 +42,22 @@ All feature code was written in **IBM Bob IDE Task Sessions**, one session per p
 | 9 | Guided tour | `8bc7689` |
 | 10 | Full i18n, language switcher, key-parity test | `8933a78` |
 | 11 | QA pass: empty state, docs, secrets audit | `4a06dce` |
+| 12 | Realistic factory equipment, building, lighting | `214ec77` |
+| 13 | Cinematic dark industrial look with bloom | `3aa3a6c` |
+| 14 | Live CCP simulator, breach toast, English names, compact labels, camera fit. The session hit the team's 50-Bobcoin budget before it could commit, so the code it wrote was committed by hand | `36bcf38` |
+
+**Manual fixes (not in Bob, made after the Bobcoins ran out):**
+- `d2610c1`: pinned @react-three/postprocessing 2.x so it works with fiber 8 (the page crashed without it).
+- `d6a8b07`: breach threshold now matches the seed's 5 °C limit (before, the toast fired at 4.1 °C); the side panel refreshes live and shows English labels; analytic camera framing instead of drei Bounds; app opens in Live mode; decorative racks, pallets, pipes and conveyor.
 
 Screenshot commits: `28384d4`, `91110d7`, `a5f48d5`, `dd497e2`, `04f6cf4`.
+
+### How to demo (about 60 seconds)
+1. Open https://asadra-digital-twin.vercel.app/en/twin. The app opens in **Live** mode: every station reads fresh simulated data and shows a green ring.
+2. Wait about 10–20 s. The **Cooling (CCP)** temperature drifts past its 5 °C critical limit. Its ring turns red and pulses, and a red **CCP breach** toast appears.
+3. Click the Cooling station (3D or chip) to open the side panel: last 5 readings, with out-of-range values in red, and the limits.
+4. Click **✓ Apply corrective action**. The cooling CCP is reset to 3 °C, the toast closes and the ring turns green again.
+5. **Live / Paused** toggles the simulation. Also try **Separation check** (raw→high-care and sesame cross-contact), **Edit mode** (drag stations), **Guided tour**, and the **עב/EN** switch.
 
 ### Run locally
 ```bash
@@ -81,7 +95,10 @@ No environment variables or API keys are needed. The data comes from `data/seed/
 - עברית (RTL) ואנגלית.
 
 ### איך השתמשנו ב-IBM Bob
-כל קוד הפיצ'רים נכתב ב-**Bob IDE Task Sessions**: 12 סשנים, אחד לכל פרומפט ב-`docs/SPEC.md`, בחשבון ההאקתון (us-east). צילומי הסיכום נמצאים ב-`bob_sessions/`, וטבלת הקומיטים מופיעה למעלה.
+כל קוד הפיצ'רים נכתב ב-**Bob IDE Task Sessions**: 15 סשנים (0–14) בחשבון ההאקתון (us-east): 0–11 לפי הפרומפטים ב-`docs/SPEC.md`, ו-12–14 לשדרוג המראה ולסימולציה החיה. סשן 14 נעצר כשנגמר תקציב 50 ה-Bobcoins, לפני הקומיט. אחריו נעשו תיקונים ידניים קטנים (`d2610c1`, `d6a8b07`). צילומי הסיכום נמצאים ב-`bob_sessions/`, וטבלת הקומיטים מופיעה למעלה.
+
+### איך מדגימים
+פותחים את /he/twin. האפליקציה נפתחת במצב חי, ותוך 10–20 שניות ה-CCP של הקירור חורג מ-5°C: הטבעת מהבהבת באדום ומופיעה התראה. לוחצים "בצע פעולה מתקנת" והתחנה חוזרת לירוק. הכפתור חי/מושהה עוצר את הסימולציה.
 
 ### הרצה
 `npm install && npm run dev` ואז לפתוח http://localhost:3000/he/twin. אין צורך במפתחות.
