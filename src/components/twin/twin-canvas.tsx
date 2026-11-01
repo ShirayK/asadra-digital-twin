@@ -36,7 +36,7 @@ interface TwinCanvasProps {
   cameraActionRef?: React.MutableRefObject<{
     fitView: () => void;
     topView: () => void;
-    focusStation: (x: number, z: number) => void;
+    focusStation: (x: number, z: number, size?: number) => void;
   } | null>;
 }
 
@@ -127,13 +127,13 @@ export default function TwinCanvas({
   // it needs access to useThree.
   const fitViewTrigger = useRef(0);
   const topViewTrigger = useRef(0);
-  const focusTrigger = useRef<{ x: number; z: number } | null>(null);
+  const focusTrigger = useRef<{ x: number; z: number; size?: number } | null>(null);
 
   if (cameraActionRef) {
     cameraActionRef.current = {
       fitView: () => { fitViewTrigger.current += 1; },
       topView: () => { topViewTrigger.current += 1; },
-      focusStation: (x: number, z: number) => { setUserInteracted(true); focusTrigger.current = { x, z }; },
+      focusStation: (x: number, z: number, size = 4.5) => { setUserInteracted(true); focusTrigger.current = { x, z, size }; },
     };
   }
 
@@ -294,7 +294,7 @@ export default function TwinCanvas({
 interface CameraActionsProps {
   fitTrigger: React.MutableRefObject<number>;
   topTrigger: React.MutableRefObject<number>;
-  focusTrigger: React.MutableRefObject<{ x: number; z: number } | null>;
+  focusTrigger: React.MutableRefObject<{ x: number; z: number; size?: number } | null>;
   sceneW: number;
   sceneD: number;
   cx: number;
@@ -307,7 +307,7 @@ function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, c
   const { camera, size } = useThree();
   const lastFit = useRef(0);
   const lastTop = useRef(0);
-  const lastFocus = useRef<{ x: number; z: number } | null>(null);
+  const lastFocus = useRef<{ x: number; z: number; size?: number } | null>(null);
   const animTarget = useRef<{ pos: THREE.Vector3; orbitTarget: THREE.Vector3 } | null>(null);
   const orbitAnimTarget = useRef<THREE.Vector3>(new THREE.Vector3(cx, 0, cz));
 
@@ -352,23 +352,25 @@ function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, c
    * Frames the machine so it fills ~60% of canvas height.
    * Camera at 40° elevation, orbit target at the machine center (y=2).
    */
-  const computeFocusPos = useCallback((x: number, z: number): { pos: THREE.Vector3; orbitTarget: THREE.Vector3 } => {
-    const orbitTarget = new THREE.Vector3(x, 2.0, z);
-    // A typical machine is ~4 u tall. To fill 60% of canvas height:
-    //   visibleH = 2 * dist * tan(FOV/2);  machineH / visibleH = 0.60
-    //   => dist = machineH / (2 * 0.60 * tan(FOV/2))
+  const computeFocusPos = useCallback((x: number, z: number, size = 4.5): { pos: THREE.Vector3; orbitTarget: THREE.Vector3 } => {
+    // Target the machine's mid-height; distance scales with machine size so it fills ~55% of the view.
+    const orbitTarget = new THREE.Vector3(x, Math.min(2.5, size * 0.35), z);
     const FOV_RAD = (40 * Math.PI) / 180;
-    const MACHINE_H = 4.0;
-    const dist = MACHINE_H / (2 * 0.60 * Math.tan(FOV_RAD / 2));
-    const EL_DEG = 40; // 40° elevation — within the requested 35–45° range
-    const EL_RAD = (EL_DEG * Math.PI) / 180;
-    const posY = orbitTarget.y + dist * Math.sin(EL_RAD);
-    const posZOff = dist * Math.cos(EL_RAD);
+    const dist = Math.max(9, (size * 1.25) / (2 * 0.55 * Math.tan(FOV_RAD / 2)));
+    const EL_RAD = (50 * Math.PI) / 180;
+    // Approach from the plant centre outward, so the camera sits outside the station and nothing is in between.
+    let dx = x - cx, dz = z - cz;
+    const len = Math.hypot(dx, dz);
+    if (len < 1) { dx = 0; dz = 1; } else { dx /= len; dz /= len; }
+    // Blend toward the default front (+z) view so text labels stay readable.
+    dx = dx * 0.7; dz = dz * 0.7 + 0.3;
+    const l2 = Math.hypot(dx, dz) || 1; dx /= l2; dz /= l2;
+    const horiz = dist * Math.cos(EL_RAD);
     return {
-      pos: new THREE.Vector3(x, posY, z + posZOff),
+      pos: new THREE.Vector3(x + dx * horiz, orbitTarget.y + dist * Math.sin(EL_RAD), z + dz * horiz),
       orbitTarget,
     };
-  }, []);
+  }, [cx, cz]);
 
   useFrame(() => {
     // Check for new triggers
@@ -389,7 +391,7 @@ function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, c
     if (focusTrigger.current !== lastFocus.current) {
       lastFocus.current = focusTrigger.current;
       if (focusTrigger.current) {
-        const { pos, orbitTarget } = computeFocusPos(focusTrigger.current.x, focusTrigger.current.z);
+        const { pos, orbitTarget } = computeFocusPos(focusTrigger.current.x, focusTrigger.current.z, focusTrigger.current.size);
         animTarget.current = { pos, orbitTarget };
         orbitAnimTarget.current = orbitTarget.clone();
         onFocusAnimating?.(true);

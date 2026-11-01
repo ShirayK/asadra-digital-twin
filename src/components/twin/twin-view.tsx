@@ -1,5 +1,8 @@
 'use client';
 
+import { resolveModelType } from './equipment-models';
+/** Approximate bounding size (m) of each machine, used to scale focus distance. */
+const FOCUS_SIZE: Record<string, number> = { chiller: 7, 'cooking-kettle': 6.5, 'stone-mill': 5, 'soaking-tank': 5.5, 'receiving-dock': 5.5, packaging: 5, 'metal-detector': 4 };
 import { useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
@@ -78,7 +81,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   const cameraActionRef = useRef<{
     fitView: () => void;
     topView: () => void;
-    focusStation: (x: number, z: number) => void;
+    focusStation: (x: number, z: number, size?: number) => void;
   } | null>(null);
 
   // True when camera has been focused on a specific station (shows "Back to overview")
@@ -299,7 +302,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
       if (!tourActive) {
         setSelectedStation((prev) => (prev?.id === station.id ? null : station));
         // Animate camera to focus on the clicked station
-        cameraActionRef.current?.focusStation(station.position.x, station.position.z);
+        cameraActionRef.current?.focusStation(station.position.x, station.position.z, FOCUS_SIZE[resolveModelType(station.id, station.nameEn ?? station.name)] ?? 4.5);
         setStationFocused(true);
       }
     },

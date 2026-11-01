@@ -7,7 +7,6 @@
 
 ---
 
-## English
 
 ### Problem
 Food plants manage HACCP with spreadsheets and paper logs. A QA manager cannot *see* the plant: which Critical Control Point (CCP) is out of range right now, where raw material crosses into high-care areas, or where allergen cross-contact may happen. Auditors get the same flat tables.
@@ -22,7 +21,7 @@ This is a standalone 3D digital twin of the production floor:
 - A layout editor supports drag and drop, with JSON export and import.
 - A guided camera tour walks through the process steps in order, showing critical limits, monitoring frequency and corrective actions (in English on /en).
 - A live simulator streams readings every 3 s. A header shows a live clock and KPIs: CCPs in range, open deviations, and hash-chain integrity.
-- Hebrew (RTL, default) and English.
+- English-only interface (/ and /he/* redirect to /en/twin).
 
 The demo dataset is a hummus plant. In live mode its cooling CCP drifts above the 5 °C critical limit and raises a breach alert. The plant also has a sesame cross-contact zone.
 
@@ -80,36 +79,3 @@ No environment variables or API keys are needed. The data comes from `data/seed/
 5. Multi-site benchmarking across plants.
 
 ---
-
-## עברית
-
-### הבעיה
-מפעלי מזון מנהלים HACCP בגיליונות ובטפסי נייר. מנהלת האיכות לא *רואה* את המפעל: איזו נקודת בקרה קריטית (CCP) חורגת עכשיו, איפה חומר גלם נכנס לאזור High-Care, ואיפה יש סכנת מגע צולב באלרגנים.
-
-### הפתרון
-התאום הוא תאום דיגיטלי תלת־ממדי עצמאי של רצפת הייצור:
-- אזורים צבועים לפי דרגת היגיינה.
-- לכל CCP יש טבעת סטטוס חיה: תקין, חריגה (אדום מהבהב), לא עדכני, או אין נתונים.
-- חיצי זרימה מונפשים מראים איך המוצר נע.
-- בדיקות הפרדה אוטומטיות מזהות RAW→HIGH_CARE בלי שלב הריגה, ומגע צולב באלרגנים (שומשום).
-- לחיצה על תחנה פותחת פאנל צד עם 5 הקריאות האחרונות, הפעולה המתקנת, ותג שלמות של שרשרת SHA-256.
-- עורך פריסה עם גרירה, ייצוא וייבוא JSON.
-- סיור מודרך במצלמה.
-- סימולציה חיה: הקירור חורג, פעולה מתקנת מחזירה אותו לטווח, והוא חורג שוב כעבור כ-45 שניות. כותרת עם שעון ומדדי KPI.
-- עברית (RTL) ואנגלית.
-
-### איך השתמשנו ב-IBM Bob
-כל קוד הפיצ'רים נכתב ב-**Bob IDE Task Sessions**: 15 סשנים (0–14) בחשבון ההאקתון (us-east): 0–11 לפי הפרומפטים ב-`docs/SPEC.md`, ו-12–14 לשדרוג המראה ולסימולציה החיה. סשן 14 נעצר כשנגמר תקציב 50 ה-Bobcoins, לפני הקומיט. כל מה שנעשה אחריו נעשה ידנית: תיקונים (`d2610c1`, `d6a8b07`), ליטוש עיצובי (`c5df2dc`): ערכת עיצוב כהה, כותרת עם מדדי KPI ושעון, סיור באנגלית, מחזורי חריגה חוזרים, ציוד ועובדים מפורטים, שכבת הפרדה בולטת ומעוף מצלמה בפתיחה, וליטוש אחרון. לאחר מכן נוסף תקציב שני לצוות (TECHZONE-TS023239691), ובו רץ **סשן 15** ב-Bob: צבעי המותג של אסדרא (סגול ולבן), תוויות קריאות בגודל קבוע, ערימת התראות, פאנל צד נגלל, זום אאוט רחב וכפתורי Fit/Top view (`09226bc`, ותיקון ידני קטן `46e1a7f`). **סשן 16** (באותו תקציב) הוסיף Fit/Top view אמיתיים לפי גבולות המפעל, מקרא מתקפל, מניעת חפיפת תוויות, תוויות אזור קריאות ותאורה סגולה (`f10e1ae`, ותיקונים ידניים `bc4935b`, `a7aa5ed`). **סשן 17** עבר לעיצוב בהיר: ממשק זכוכית לבן/סגול בהיר, רצפת אפוקסי בהירה, תאורה חדשה, פחות bloom ותוויות 13px (`3fe3ad2`, ותיקונים ידניים `3cf9b59`, `8b21791`). **סשן 18** החליף צורות כלליות בציוד מזוהה (רמפת קבלה עם משטחים, סירי בישול בקיטור, טחנת אבן, מקרר הלם, קשת גלאי מתכות על מסוע, קו אריזה), קווי רצפה דקים במקום טבעות עבות, והתראות הפרדה ליד התחנות (`441f6f4`, ותיקונים ידניים `9e8a8b8`, `906df9f`). **סשן 19** הוסיף גלאי מתכות בקנה מידה אמיתי, יחידת קירור, עובדים ומצלמה שמתמקדת בתחנה בלחיצה (`227dab3`, ותיקונים ידניים `10382ee`, `ca5b672`). **סשן 20** הפך את האפליקציה לאנגלית בלבד (/he ו-/ מפנים ל-/en/twin), הידק את התקריבים, עידן את התראות ההפרדה והעביר את הודעת החריגה לתוך הקנבס (`02b93d6`, ותיקונים ידניים `5d9607b`, `0f954b8`). צילומי הסיכום נמצאים ב-`bob_sessions/`, וטבלת הקומיטים מופיעה למעלה.
-
-### איך מדגימים
-פותחים את /en/twin. האפליקציה נפתחת במצב חי, ותוך 10–20 שניות ה-CCP של הקירור חורג מ-5°C: הטבעת מהבהבת באדום ומופיעה התראה. לוחצים "בצע פעולה מתקנת" והתחנה חוזרת לירוק. הכפתור חי/מושהה עוצר את הסימולציה.
-
-### הרצה
-`npm install && npm run dev` ואז לפתוח http://localhost:3000/en/twin. אין צורך במפתחות.
-
-### חזון ומפת דרכים
-1. **פריסה אוטומטית מתמונת תוכנית קומה בעזרת AI:** מצלמים את תוכנית המפעל, ומודל ראייה מחלץ אזורים ותחנות ל-JSON.
-2. חיבור קריאה בלבד ל-Asadra לקריאות CCP חיות.
-3. מצב ביקורת, הפעלה חוזרת של יום, ודוח למבקר.
-4. חיישני IoT.
-5. השוואה בין מפעלים.

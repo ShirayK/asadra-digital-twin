@@ -19,7 +19,7 @@ Features:
 - **Layout editor** — drag stations, auto-save to localStorage, Export/Import JSON, Reset
 - **Guided tour** — camera walk-through of all process steps in order
 - **Live simulator + KPI header** — readings every 3 s, cooling breach → corrective action → breach again, brief STALE dropouts; live clock and KPI strip
-- **i18n** — Hebrew RTL (default) and English
+- **Language** — English only (`/` and `/he/*` redirect to `/en/twin`)
 - **Empty state** — clear message when no dataset is loaded
 
 ## Stack
@@ -76,7 +76,7 @@ src/adapters/           # TwinDataSource interface + JSON / localStorage impls
   local-overlay.ts      # Stores layout edits in localStorage
 src/app/[locale]/       # Next.js pages (server components load + validate data)
 src/components/twin/    # React / R3F client components
-src/i18n/               # Locale dictionaries (he = Hebrew RTL, en = English)
+src/i18n/               # Locale dictionaries (en is served; he.json kept only for the key-parity test)
 tests/domain/           # Vitest unit tests (99 tests)
 bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–20; sessions 15–20 ran on a second team budget, TECHZONE)
 docs/                   # SPEC.md · INTEGRATION.md
@@ -121,11 +121,9 @@ Deploy as a **separate** Vercel project (not the Asadra project):
 2. No environment variables are required — the app runs on local seed data.
 3. No secret tokens should ever be added to the Vercel project settings.
 
-## Internationalization
+## Language
 
-Default locale: **Hebrew (RTL)**. English is also supported.  
-All UI strings are in `src/i18n/{he,en}.json` — both files must have identical key sets  
-(enforced by `tests/domain/i18n.test.ts`).
+The app is English only. `/` and any `/he/...` URL redirect to `/en/twin`, and the page data is served with English names, fields and corrective-action text.
 
 ## Security checklist
 
