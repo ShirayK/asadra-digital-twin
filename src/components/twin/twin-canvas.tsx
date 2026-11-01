@@ -356,7 +356,7 @@ function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, c
     // Target the machine's mid-height; distance scales with machine size so it fills ~55% of the view.
     const orbitTarget = new THREE.Vector3(x, Math.min(2.5, size * 0.35), z);
     const FOV_RAD = (40 * Math.PI) / 180;
-    const dist = Math.max(9, (size * 1.25) / (2 * 0.55 * Math.tan(FOV_RAD / 2)));
+    const dist = Math.max(7, (size * 0.85) / (2 * 0.55 * Math.tan(FOV_RAD / 2)));
     const EL_RAD = (50 * Math.PI) / 180;
     // Approach from the plant centre outward, so the camera sits outside the station and nothing is in between.
     // Always view from the front (+z) so labels read upright; swing sideways toward the plant edge
