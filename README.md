@@ -78,7 +78,7 @@ src/app/[locale]/       # Next.js pages (server components load + validate data)
 src/components/twin/    # React / R3F client components
 src/i18n/               # Locale dictionaries (he = Hebrew RTL, en = English)
 tests/domain/           # Vitest unit tests (99 tests)
-bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–14)
+bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–15; session 15 ran on a second team budget, TECHZONE)
 docs/                   # SPEC.md · INTEGRATION.md
 ```
 
@@ -147,7 +147,9 @@ All UI strings are in `src/i18n/{he,en}.json` — both files must have identical
 | 13 | Cinematic dark industrial look with bloom | `3aa3a6c` |
 | 14 | Live CCP simulator, breach toast, English names, compact labels, camera fit. The session hit the team's 50-Bobcoin budget before it could commit, so the code it wrote was committed by hand | `36bcf38` |
 
-**Manual work (not in Bob, done by hand after session 14 used up the Bobcoin budget):**
+**Bob session 15 (second team budget, TECHZONE-TS023239691):** Asadra purple/white palette, readable constant-size labels, toast stack, scrollable side panel, zoom-out + Fit/Top view.
+
+**Manual work (not in Bob, done by hand after session 14 used up the first Bobcoin budget):**
 - `d2610c1`: pinned @react-three/postprocessing 2.x so it works with fiber 8 (the page crashed without it).
 - `d6a8b07`: breach threshold now matches the seed's 5 °C limit (before, the toast fired at 4.1 °C); the side panel refreshes live and shows English labels; analytic camera framing instead of drei Bounds; app opens in Live mode; decorative racks, pallets, pipes and conveyor.
 - `c5df2dc`: round-3 UI polish: dark glass theme, a header with logo, live clock and KPI strip (CCPs OK, open deviations, chain integrity), English guided tour on /en, simulator cycles (cooling breaches again about 45 s after a corrective action, and the cooking CCP briefly goes STALE every minute; 2 new tests), more detailed equipment (ladders, gauges, chiller fans, packaging conveyor with moving rollers), worker figures, thicker glowing pipes with flow pulses, compact zone tags, a bold separation overlay (glowing dashed path, warning beacon, badge) and a 3 s camera fly-in on load.
