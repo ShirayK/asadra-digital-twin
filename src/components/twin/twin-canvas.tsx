@@ -105,7 +105,7 @@ export default function TwinCanvas({
   // Fit the wider axis; for a PerspectiveCamera the visible half-extent at
   // distance d = d * tan(fov/2).  We want half-span ≤ visible extent.
   // 0.90 margin fills ~80% of the canvas at 1920×1080.
-  const halfSpan = Math.max(sceneW, sceneD) / 2 * 0.90;
+  const halfSpan = Math.max(sceneW, sceneD) / 2 * 0.72;
   const fitDist = halfSpan / Math.tan(FOV_RAD / 2);
   const camY = fitDist * 0.82;
   const camZ = cz + fitDist * 0.68;
@@ -301,7 +301,7 @@ function CameraActions({ fitTrigger, topTrigger, sceneW, sceneD, cx, cz, orbitRe
     // Distance needed to fill ~80% of canvas — tighter margin than before
     const MARGIN = 0.90;
     const dForWidth = (sceneW / 2 * MARGIN) / Math.tan(hFovRad);
-    const dForDepth = (sceneD / 2 * MARGIN) / Math.tan(FOV_RAD / 2);
+    const dForDepth = (sceneD / 2 * MARGIN * 0.75) / Math.tan(FOV_RAD / 2); // depth is foreshortened at 45°
     const dist = Math.max(dForWidth, dForDepth);
     // 45-degree elevation angle provides good fit view
     const posY = dist * Math.sin(Math.PI / 4);
@@ -320,7 +320,7 @@ function CameraActions({ fitTrigger, topTrigger, sceneW, sceneD, cx, cz, orbitRe
     const hFovRad = Math.atan(Math.tan(FOV_RAD / 2) * aspect);
     const MARGIN = 1.20;
     const dForWidth = (sceneW / 2 * MARGIN) / Math.tan(hFovRad);
-    const dForDepth = (sceneD / 2 * MARGIN) / Math.tan(FOV_RAD / 2);
+    const dForDepth = (sceneD / 2 * MARGIN * 0.75) / Math.tan(FOV_RAD / 2); // depth is foreshortened at 45°
     const dist = Math.max(dForWidth, dForDepth);
     return {
       pos: new THREE.Vector3(cx, dist, cz),
