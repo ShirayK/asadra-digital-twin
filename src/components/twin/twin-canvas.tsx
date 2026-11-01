@@ -146,7 +146,7 @@ export default function TwinCanvas({
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '700px' }}>
+    <div style={{ position: 'relative', width: '100%', height: 'clamp(460px, calc(100vh - 210px), 760px)' }}>
       <Canvas
         frameloop={frameloop}
         shadows
