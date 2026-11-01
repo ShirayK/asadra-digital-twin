@@ -78,7 +78,7 @@ src/app/[locale]/       # Next.js pages (server components load + validate data)
 src/components/twin/    # React / R3F client components
 src/i18n/               # Locale dictionaries (he = Hebrew RTL, en = English)
 tests/domain/           # Vitest unit tests (99 tests)
-bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–15; session 15 ran on a second team budget, TECHZONE)
+bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–16; sessions 15–16 session 15 ran on a second team budget, TECHZONE)
 docs/                   # SPEC.md · INTEGRATION.md
 ```
 
@@ -148,6 +148,8 @@ All UI strings are in `src/i18n/{he,en}.json` — both files must have identical
 | 14 | Live CCP simulator, breach toast, English names, compact labels, camera fit. The session hit the team's 50-Bobcoin budget before it could commit, so the code it wrote was committed by hand | `36bcf38` |
 
 **Bob session 15 (second team budget, TECHZONE-TS023239691):** Asadra purple/white palette, readable constant-size labels, toast stack, scrollable side panel, zoom-out + Fit/Top view.
+
+**Bob session 16 (same budget):** true bounding-box Fit/Top view, collapsible legend, label collision handling, 12px zone labels, purple lighting.
 
 **Manual work (not in Bob, done by hand after session 14 used up the first Bobcoin budget):**
 - `d2610c1`: pinned @react-three/postprocessing 2.x so it works with fiber 8 (the page crashed without it).
