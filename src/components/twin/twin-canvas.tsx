@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, Environment } from '@react-three/drei';
@@ -66,13 +66,48 @@ export default function TwinCanvas({
   const [userInteracted, setUserInteracted] = useState(false);
   const orbitRef = useRef<OrbitControlsImpl>(null);
 
-  // Analytical camera framing
-  const cx = dto.siteWidth / 2;
-  const cz = dto.siteDepth / 2;
-  const plantSpan = Math.max(dto.siteWidth, dto.siteDepth);
-  const fitDist = (plantSpan / 2) / Math.tan((20 * Math.PI) / 180) * 0.62;
-  const camY = fitDist * 0.85;
-  const camZ = cz + fitDist * 0.75;
+  // ── Compute tight bounding box of all stations + zone extents ─────────────
+  // Used by fit-view and top-view to frame the full plant with margin.
+  const sceneBounds = useRef<{
+    minX: number; maxX: number; minZ: number; maxZ: number;
+  } | null>(null);
+
+  if (!sceneBounds.current) {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const s of dto.stations) {
+      minX = Math.min(minX, s.position.x);
+      maxX = Math.max(maxX, s.position.x);
+      minZ = Math.min(minZ, s.position.z);
+      maxZ = Math.max(maxZ, s.position.z);
+    }
+    for (const z of dto.zones) {
+      minX = Math.min(minX, z.x - z.width / 2);
+      maxX = Math.max(maxX, z.x + z.width / 2);
+      minZ = Math.min(minZ, z.z - z.depth / 2);
+      maxZ = Math.max(maxZ, z.z + z.depth / 2);
+    }
+    // Fallback: use site extents if no stations/zones
+    if (!isFinite(minX)) {
+      minX = 0; maxX = dto.siteWidth; minZ = 0; maxZ = dto.siteDepth;
+    }
+    sceneBounds.current = { minX, maxX, minZ, maxZ };
+  }
+
+  const { minX, maxX, minZ, maxZ } = sceneBounds.current;
+  const cx = (minX + maxX) / 2;
+  const cz = (minZ + maxZ) / 2;
+  const sceneW = maxX - minX;
+  const sceneD = maxZ - minZ;
+
+  // Camera distance: must frame the larger span, accounting for fov=40 and
+  // typical landscape aspect (~1.8). Add 15% margin.
+  const FOV_RAD = (40 * Math.PI) / 180;
+  // Fit the wider axis; for a PerspectiveCamera the visible half-extent at
+  // distance d = d * tan(fov/2).  We want half-span ≤ visible extent.
+  const halfSpan = Math.max(sceneW, sceneD) / 2 * 1.15;
+  const fitDist = halfSpan / Math.tan(FOV_RAD / 2);
+  const camY = fitDist * 0.82;
+  const camZ = cz + fitDist * 0.68;
 
   const autoRotate = !userInteracted && !editMode && !tourActive;
   const frameloop: 'always' | 'demand' = editMode || tourActive || autoRotate ? 'always' : 'demand';
@@ -134,8 +169,11 @@ export default function TwinCanvas({
         <Environment preset="night" />
 
         {/* ── Lighting ────────────────────────────────────────────────────── */}
-        <ambientLight intensity={0.07} />
-        <hemisphereLight args={['#1a1030', '#0a0810', 0.28]} />
+        {/* Slightly elevated ambient to lift the base darkness */}
+        <ambientLight intensity={0.10} />
+        {/* Hemisphere: warm purple sky, cool deep ground */}
+        <hemisphereLight args={['#2a1560', '#0a0812', 0.38]} />
+        {/* Key light — cool lavender from above */}
         <directionalLight
           position={[dto.siteWidth * 0.6, 25, dto.siteDepth * 0.7]}
           intensity={0.85}
@@ -150,10 +188,19 @@ export default function TwinCanvas({
           shadow-camera-bottom={-dto.siteDepth}
           shadow-bias={-0.0005}
         />
+        {/* Fill light — deep purple from opposite corner */}
         <directionalLight
           position={[-dto.siteWidth * 0.4, 12, -dto.siteDepth * 0.4]}
-          intensity={0.12}
-          color="#241250"
+          intensity={0.18}
+          color="#41228e"
+        />
+        {/* Rim light — subtle purple from behind-right for depth */}
+        <pointLight
+          position={[dto.siteWidth * 0.9, 8, dto.siteDepth * 0.1]}
+          intensity={0.45}
+          color="#6841b0"
+          distance={dto.siteWidth * 2}
+          decay={2}
         />
 
         {/* ── Guided tour ──────────────────────────────────────────────────── */}
@@ -166,8 +213,10 @@ export default function TwinCanvas({
         <CameraActions
           fitTrigger={fitViewTrigger}
           topTrigger={topViewTrigger}
-          fitPos={[cx, camY, camZ]}
-          target={[cx, 0, cz]}
+          sceneW={sceneW}
+          sceneD={sceneD}
+          cx={cx}
+          cz={cz}
           orbitRef={orbitRef}
         />
 
@@ -222,48 +271,92 @@ export default function TwinCanvas({
 // ── CameraActions ─────────────────────────────────────────────────────────────
 // Runs inside the Canvas, has access to useThree.
 // Smoothly animates camera to fit or top view when triggered.
+// Fit: frames the full plant bounding box with correct aspect-ratio math.
+// Top: straight-down orthographic-like view of the full plant.
 
 interface CameraActionsProps {
   fitTrigger: React.MutableRefObject<number>;
   topTrigger: React.MutableRefObject<number>;
-  fitPos: [number, number, number];
-  target: [number, number, number];
+  sceneW: number;
+  sceneD: number;
+  cx: number;
+  cz: number;
   orbitRef: React.RefObject<OrbitControlsImpl>;
 }
 
-function CameraActions({ fitTrigger, topTrigger, fitPos, target, orbitRef }: CameraActionsProps) {
-  const { camera } = useThree();
+function CameraActions({ fitTrigger, topTrigger, sceneW, sceneD, cx, cz, orbitRef }: CameraActionsProps) {
+  const { camera, size } = useThree();
   const lastFit = useRef(0);
   const lastTop = useRef(0);
-  const animTarget = useRef<[number, number, number] | null>(null);
+  const animTarget = useRef<{ pos: THREE.Vector3; orbitTarget: THREE.Vector3 } | null>(null);
+  const orbitAnimTarget = useRef<THREE.Vector3>(new THREE.Vector3(cx, 0, cz));
+
+  const computeFitPos = useCallback((): { pos: THREE.Vector3; orbitTarget: THREE.Vector3 } => {
+    // Use actual viewport aspect to ensure both width and depth fit in view
+    const aspect = size.width / size.height;
+    const FOV_RAD = (40 * Math.PI) / 180;
+    // Half-angles for both axes
+    const hFovRad = Math.atan(Math.tan(FOV_RAD / 2) * aspect);
+    // Distance needed to fit horizontal span (sceneW) and vertical span (sceneD)
+    const MARGIN = 1.18;
+    const dForWidth = (sceneW / 2 * MARGIN) / Math.tan(hFovRad);
+    const dForDepth = (sceneD / 2 * MARGIN) / Math.tan(FOV_RAD / 2);
+    const dist = Math.max(dForWidth, dForDepth);
+    // 45-degree elevation angle provides good fit view
+    const posY = dist * Math.sin(Math.PI / 4);
+    const posZOffset = dist * Math.cos(Math.PI / 4);
+    return {
+      pos: new THREE.Vector3(cx, posY, cz + posZOffset),
+      orbitTarget: new THREE.Vector3(cx, 0, cz),
+    };
+  }, [size, sceneW, sceneD, cx, cz]);
+
+  const computeTopPos = useCallback((): { pos: THREE.Vector3; orbitTarget: THREE.Vector3 } => {
+    // Top view: camera directly above the scene center looking straight down.
+    // Distance to frame entire plant with margin.
+    const aspect = size.width / size.height;
+    const FOV_RAD = (40 * Math.PI) / 180;
+    const hFovRad = Math.atan(Math.tan(FOV_RAD / 2) * aspect);
+    const MARGIN = 1.20;
+    const dForWidth = (sceneW / 2 * MARGIN) / Math.tan(hFovRad);
+    const dForDepth = (sceneD / 2 * MARGIN) / Math.tan(FOV_RAD / 2);
+    const dist = Math.max(dForWidth, dForDepth);
+    return {
+      pos: new THREE.Vector3(cx, dist, cz),
+      orbitTarget: new THREE.Vector3(cx, 0, cz),
+    };
+  }, [size, sceneW, sceneD, cx, cz]);
 
   useFrame(() => {
     // Check for new triggers
     if (fitTrigger.current !== lastFit.current) {
       lastFit.current = fitTrigger.current;
-      animTarget.current = fitPos;
+      const { pos, orbitTarget } = computeFitPos();
+      animTarget.current = { pos, orbitTarget };
+      orbitAnimTarget.current = orbitTarget;
     }
     if (topTrigger.current !== lastTop.current) {
       lastTop.current = topTrigger.current;
-      // Top view: directly above the center
-      animTarget.current = [target[0], Math.max(fitPos[1] * 1.5, 40), target[2]];
+      const { pos, orbitTarget } = computeTopPos();
+      animTarget.current = { pos, orbitTarget };
+      orbitAnimTarget.current = orbitTarget;
     }
 
     if (!animTarget.current) return;
 
-    const dest = animTarget.current;
-    const destVec = new THREE.Vector3(dest[0], dest[1], dest[2]);
-    camera.position.lerp(destVec, 0.08);
+    camera.position.lerp(animTarget.current.pos, 0.08);
 
-    const dist = camera.position.distanceTo(destVec);
-
-    if (dist < 0.5) {
-      camera.position.set(...dest);
+    const dist = camera.position.distanceTo(animTarget.current.pos);
+    if (dist < 0.3) {
+      camera.position.copy(animTarget.current.pos);
       animTarget.current = null;
     }
 
-    // Keep orbit controls target synced
-    orbitRef.current?.update?.();
+    // For top view, tilt camera to look straight down
+    if (orbitRef.current) {
+      orbitRef.current.target.lerp(orbitAnimTarget.current, 0.08);
+      orbitRef.current.update();
+    }
   });
 
   return null;
@@ -292,6 +385,42 @@ function SceneContents({
   onStationClick,
   onStationMove,
 }: SceneContentsProps) {
+  // Build a set of station IDs that appear in active separation issues.
+  // Separation issues reference step IDs, but flow segments carry the resolved
+  // {x, z} positions.  Match station positions (±0.01 tolerance) to the
+  // segment endpoints to find which stations have a warning.
+  const separationStationIds = useMemo(() => {
+    if (dto.separationIssues.length === 0) return new Set<string>();
+
+    const issueKeys = new Set(
+      dto.separationIssues.flatMap((iss) => [
+        `${iss.fromStepId}->${iss.toStepId}`,
+      ]),
+    );
+
+    const warnPositions: Array<{ x: number; z: number }> = [];
+    for (const seg of dto.flowSegments) {
+      const key = `${seg.edge.from}->${seg.edge.to}`;
+      if (issueKeys.has(key)) {
+        warnPositions.push(seg.from, seg.to);
+      }
+    }
+
+    const result = new Set<string>();
+    for (const st of dto.stations) {
+      for (const wp of warnPositions) {
+        if (
+          Math.abs(st.position.x - wp.x) < 0.5 &&
+          Math.abs(st.position.z - wp.z) < 0.5
+        ) {
+          result.add(st.id);
+          break;
+        }
+      }
+    }
+    return result;
+  }, [dto.separationIssues, dto.flowSegments, dto.stations]);
+
   return (
     <>
       <FactoryFloor widthM={dto.siteWidth} depthM={dto.siteDepth} zones={dto.zones} />
@@ -308,6 +437,7 @@ function SceneContents({
           locale={locale}
           editMode={editMode}
           selected={station.id === selectedStationId}
+          hasSeparationWarning={separationStationIds.has(station.id)}
           onClick={onStationClick}
           onMove={onStationMove}
         />

@@ -16,12 +16,15 @@ const WALL_H = 1.0;
 /** Perimeter wall thickness */
 const WALL_T = 0.22;
 
-/** Zone hygiene class → emissive glow colour for floor outline */
+/**
+ * Zone hygiene class → emissive glow colour for floor outline.
+ * PACKAGING uses deep indigo-purple #5b21b6 (matches zone-mesh.tsx).
+ */
 const ZONE_EMISSIVE: Record<string, string> = {
   RAW: '#ef4444',
   LOW_RISK: '#f59e0b',
   HIGH_CARE: '#22c55e',
-  PACKAGING: '#3b82f6',
+  PACKAGING: '#5b21b6', // deep indigo-purple, distinct from STORAGE
   STORAGE: '#8b5cf6',
   NON_FOOD: '#6b7280',
 };
@@ -96,19 +99,20 @@ export default function FactoryFloor({ widthM, depthM, zones = [] }: FactoryFloo
 
   return (
     <group>
-      {/* ── Dark epoxy floor with subtle reflection ──────────────────────────── */}
+      {/* ── Dark epoxy floor with subtle purple-tinted reflection ────────────── */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0, cz]}>
         <planeGeometry args={[widthM, depthM]} />
-        {/* MeshReflectorMaterial gives subtle mirror reflections on the dark floor */}
+        {/* MeshReflectorMaterial gives subtle mirror reflections on the dark floor.
+            Slight purple tint (#1a1530) to unify with brand lighting. */}
         <MeshReflectorMaterial
-          color="#1b2230"
-          roughness={0.6}
-          metalness={0.0}
-          mixBlur={8}
-          mixStrength={0.35}
+          color="#1a1530"
+          roughness={0.55}
+          metalness={0.05}
+          mixBlur={10}
+          mixStrength={0.45}
           resolution={512}
-          blur={[400, 100]}
-          mirror={0.15}
+          blur={[500, 120]}
+          mirror={0.22}
           minDepthThreshold={0.4}
           maxDepthThreshold={1.4}
           depthScale={0}

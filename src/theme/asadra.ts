@@ -52,8 +52,9 @@ export const hygiene = {
   RAW:       status.deviation,  // red   — raw material risk
   LOW_RISK:  status.expiring,   // amber — low risk
   HIGH_CARE: status.ok,         // green — high care / clean
-  PACKAGING: brand[500],        // purple 500 — packaging
-  STORAGE:   brand[400],        // purple 400 — storage
+  /** Deep indigo-purple — distinct from STORAGE; matches zone-mesh / factory-floor */
+  PACKAGING: '#5b21b6',         // deep indigo-purple
+  STORAGE:   brand[400],        // purple 400 — lighter violet-purple
   NON_FOOD:  status.noData,     // gray  — non-food
 } as const;
 

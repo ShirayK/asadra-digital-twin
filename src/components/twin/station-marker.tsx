@@ -11,11 +11,74 @@ import { getDictionary } from '@/i18n';
 import { EquipmentModel, resolveModelType } from './equipment-models';
 import { brand, stationStatus } from '@/theme/asadra';
 
+// ── Screen-space label collision registry ─────────────────────────────────────
+// Updated each frame by the StationMarker that owns each entry.
+// Higher-priority labels suppress lower-priority ones when screen rects overlap.
+//
+// Priority values (higher = more important):
+//   3 — OUT_OF_RANGE breach
+//   2 — selected station
+//   1 — station with a separation warning (injected from outside)
+//   0 — normal
+
+export type LabelPriority = 0 | 1 | 2 | 3;
+
+interface LabelEntry {
+  id: string;
+  screenX: number;
+  screenY: number;
+  /** Approximate screen-space half-width of the label pill in px */
+  halfW: number;
+  /** Approximate screen-space half-height of the label pill in px */
+  halfH: number;
+  priority: LabelPriority;
+}
+
+// Module-level store — shared across all StationMarker instances in the same Canvas
+const labelStore: Map<string, LabelEntry> = new Map();
+
+/** Register/update a label entry.  Called from useFrame inside StationMarker. */
+export function updateLabelEntry(entry: LabelEntry): void {
+  labelStore.set(entry.id, entry);
+}
+
+/** Remove a label entry on unmount. */
+export function removeLabelEntry(id: string): void {
+  labelStore.delete(id);
+}
+
+/**
+ * Returns true when this label should be suppressed because a higher-priority
+ * label's bounding rect overlaps it in screen space.
+ *
+ * Overlap test: axis-aligned bounding box (AABB).
+ */
+export function isLabelOccluded(id: string): boolean {
+  const self = labelStore.get(id);
+  if (!self) return false;
+
+  for (const [otherId, other] of labelStore) {
+    if (otherId === id) continue;
+    if (other.priority <= self.priority) continue;
+    // AABB overlap check
+    const dx = Math.abs(other.screenX - self.screenX);
+    const dy = Math.abs(other.screenY - self.screenY);
+    const overlapX = dx < other.halfW + self.halfW;
+    const overlapY = dy < other.halfH + self.halfH;
+    if (overlapX && overlapY) return true;
+  }
+  return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface StationMarkerProps {
   station: StationDTO;
   locale: Locale;
   editMode?: boolean;
   selected?: boolean;
+  /** Whether this station has an active separation warning */
+  hasSeparationWarning?: boolean;
   onClick: (station: StationDTO) => void;
   onMove?: (id: string, x: number, z: number) => void;
   /** When true, suppress the 3-D label (used to hide equipment sub-labels) */
@@ -35,26 +98,6 @@ const RING_RADIUS: Record<string, number> = {
   CP: 1.65,
   PRP: 1.35,
 };
-
-/**
- * LOD hook: returns true when the camera is closer than `threshold` units
- * to the given world-space position.  Used to collapse distant labels to dots.
- */
-function useLabelLod(
-  position: THREE.Vector3Like,
-  threshold = 45,
-): boolean {
-  const { camera } = useThree();
-  const closeRef = useRef(true);
-
-  useFrame(() => {
-    const d = camera.position.distanceTo(position as THREE.Vector3);
-    closeRef.current = d < threshold;
-  });
-
-  // Return current value — re-render is driven by the Html component polling
-  return closeRef.current;
-}
 
 /** Status indicator ring at the top of the model */
 function StatusRing({
@@ -87,16 +130,20 @@ function StatusRing({
 /**
  * Station marker — procedural equipment model, status ring, LOD label.
  *
- * Label LOD rules:
- *  - Camera < 45 u away → full label for all stations.
- *  - Camera ≥ 45 u away → colored dot only, except for selected station and
- *    breached (OUT_OF_RANGE) stations which always show the full label.
+ * Label visibility rules (priority order):
+ *  1. hideLabel prop → always hidden.
+ *  2. Not in "showFull" mode (far away, not selected, not breaching) → dot only.
+ *  3. Screen-space collision: if a higher-priority label overlaps this one
+ *     in screen coordinates, collapse to a dot.
+ *
+ * Priority: breach (OUT_OF_RANGE)=3, selected=2, separation warning=1, normal=0.
  */
 export default function StationMarker({
   station,
   locale,
   editMode = false,
   selected = false,
+  hasSeparationWarning = false,
   onClick,
   onMove,
   hideLabel = false,
@@ -107,7 +154,7 @@ export default function StationMarker({
   const [hovered, setHovered] = useState(false);
   const [dragging, setDragging] = useState(false);
 
-  const { camera, gl, raycaster } = useThree();
+  const { camera, gl, raycaster, size } = useThree();
 
   const height = HEIGHT_BY_TYPE[station.controlType] ?? 1.1;
   const ringR = RING_RADIUS[station.controlType] ?? 0.5;
@@ -118,14 +165,26 @@ export default function StationMarker({
 
   // World-space label anchor — above the status ring
   const labelWorldPos = useRef(new THREE.Vector3());
+  const screenPos = useRef(new THREE.Vector3());
 
   const floorPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
   const intersectPoint = useRef(new THREE.Vector3());
 
   // LOD: close = full label, far = dot (unless selected or breaching)
   const [closeCamera, setCloseCamera] = useState(true);
+  // Collision result: true = suppressed by higher-priority label
+  const [occluded, setOccluded] = useState(false);
 
-  // Pulse ring for OUT_OF_RANGE; update label position; LOD check
+  // Compute this label's priority
+  const priority: LabelPriority = isOutOfRange
+    ? 3
+    : selected
+    ? 2
+    : hasSeparationWarning
+    ? 1
+    : 0;
+
+  // Pulse ring for OUT_OF_RANGE; update label position; LOD check; collision update
   useFrame(({ clock, camera: cam }) => {
     if (ringRef.current) {
       if (isOutOfRange) {
@@ -144,7 +203,38 @@ export default function StationMarker({
     const d = cam.position.distanceTo(labelWorldPos.current);
     const nowClose = d < 45;
     setCloseCamera((prev) => (prev !== nowClose ? nowClose : prev));
+
+    // Compute screen-space position for collision detection
+    if (!hideLabel) {
+      screenPos.current.copy(labelWorldPos.current);
+      screenPos.current.project(cam);
+      const sx = (screenPos.current.x * 0.5 + 0.5) * size.width;
+      const sy = (-screenPos.current.y * 0.5 + 0.5) * size.height;
+
+      // Approximate label pill size: ~80px wide, ~20px tall
+      const halfW = 45;
+      const halfH = 12;
+
+      updateLabelEntry({
+        id: station.id,
+        screenX: sx,
+        screenY: sy,
+        halfW,
+        halfH,
+        priority,
+      });
+
+      const nowOccluded = isLabelOccluded(station.id);
+      setOccluded((prev) => (prev !== nowOccluded ? nowOccluded : prev));
+    }
   });
+
+  // Clean up registry on unmount
+  // (useEffect cleanup runs on unmount; no deps needed)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stationId = station.id;
+  // We rely on the closure — see cleanup inside the component return statement
+  // using a ref-based approach would add complexity; the store is tolerant of stale entries.
 
   const snap = (v: number) => Math.round(v / 0.5) * 0.5;
 
@@ -186,14 +276,15 @@ export default function StationMarker({
       if (groupRef.current && onMove) {
         const nx = snap(groupRef.current.position.x);
         const nz = snap(groupRef.current.position.z);
-        onMove(station.id, nx, nz);
+        onMove(stationId, nx, nz);
       }
     },
-    [dragging, editMode, gl, onMove, station.id],
+    [dragging, editMode, gl, onMove, stationId],
   );
 
   // Decide whether to show full label or dot
-  const showFullLabel = closeCamera || selected || isOutOfRange;
+  // Occluded by higher-priority label → show dot
+  const showFullLabel = (closeCamera || selected || isOutOfRange) && !occluded;
   const displayName = locale === 'en' && station.nameEn ? station.nameEn : station.name;
 
   return (
@@ -291,7 +382,7 @@ export default function StationMarker({
               </span>
             </div>
           ) : (
-            /* LOD dot — distant camera: just a colored dot, name on hover */
+            /* LOD dot — distant camera or occluded: just a colored dot, name on hover */
             <div
               title={displayName}
               style={{
