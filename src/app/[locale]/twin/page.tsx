@@ -64,6 +64,15 @@ const TOUR_EN_NAMES: Record<string, string> = {
   'step-pack': 'Packaging',
   'step-output': 'Finished product',
 };
+
+function caToEn(text?: string): string | undefined {
+  if (!text) return text;
+  if (!/[\u0590-\u05FF]/.test(text)) return text;
+  const [head, tail] = text.split(' — ');
+  const action = CA_EN[head] ?? Object.entries(CA_EN).find(([he]) => he.startsWith(head))?.[1]?.replace(/ if .*$/, '') ?? 'Corrective action taken';
+  const m = tail?.match(/([\d.]+\s*°?C?)\D+([\d.]+\s*°?C?)/);
+  return m ? `${action} — measured ${m[1]} vs limit ${m[2]}` : action;
+}
 const FIELD_EN: Record<string, string> = {
   temp: 'Temperature',
   duration_h: 'Soak time',
@@ -133,7 +142,7 @@ export default async function TwinPage({ params }: { params: { locale: string } 
       position: station.position,
       zoneId: station.zoneId,
       status,
-      lastReadings: readings.slice(0, 5),
+      lastReadings: readings.slice(0, 5).map((r) => ({ ...r, correctiveAction: caToEn(r.correctiveAction) })),
     };
   });
 
