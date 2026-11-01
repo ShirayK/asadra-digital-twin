@@ -359,18 +359,17 @@ function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, c
     const dist = Math.max(9, (size * 1.25) / (2 * 0.55 * Math.tan(FOV_RAD / 2)));
     const EL_RAD = (50 * Math.PI) / 180;
     // Approach from the plant centre outward, so the camera sits outside the station and nothing is in between.
-    let dx = x - cx, dz = z - cz;
-    const len = Math.hypot(dx, dz);
-    if (len < 1) { dx = 0; dz = 1; } else { dx /= len; dz /= len; }
-    // Blend toward the default front (+z) view so text labels stay readable.
-    dx = dx * 0.7; dz = dz * 0.7 + 0.3;
-    const l2 = Math.hypot(dx, dz) || 1; dx /= l2; dz /= l2;
+    // Always view from the front (+z) so labels read upright; swing sideways toward the plant edge
+    // the station is nearest, so neighbouring machines are not between camera and target.
+    const side = Math.max(-1, Math.min(1, (x - cx) / Math.max(1, sceneW / 2)));
+    let dx = side * 0.6, dz = 1;
+    const l2 = Math.hypot(dx, dz); dx /= l2; dz /= l2;
     const horiz = dist * Math.cos(EL_RAD);
     return {
       pos: new THREE.Vector3(x + dx * horiz, orbitTarget.y + dist * Math.sin(EL_RAD), z + dz * horiz),
       orbitTarget,
     };
-  }, [cx, cz]);
+  }, [cx, sceneW]);
 
   useFrame(() => {
     // Check for new triggers
