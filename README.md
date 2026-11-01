@@ -78,7 +78,7 @@ src/app/[locale]/       # Next.js pages (server components load + validate data)
 src/components/twin/    # React / R3F client components
 src/i18n/               # Locale dictionaries (he = Hebrew RTL, en = English)
 tests/domain/           # Vitest unit tests (99 tests)
-bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–19; sessions 15–19 ran on a second team budget, TECHZONE)
+bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–20; sessions 15–20 ran on a second team budget, TECHZONE)
 docs/                   # SPEC.md · INTEGRATION.md
 ```
 
@@ -155,6 +155,10 @@ All UI strings are in `src/i18n/{he,en}.json` — both files must have identical
 
 **Bob session 18 (same budget):** recognizable detailed equipment (receiving dock, steam kettles, stone mill, blast chiller, metal-detector arch on conveyor, packaging line), thin floor outlines, warnings beside stations.
 
+**Bob session 19 (same budget):** real-scale metal detector, chiller condensing unit, low-poly workers, click-to-focus camera + Back to overview, CCP label priority/RTL fix (227dab3; manual fixes 10382ee, ca5b672).
+
+**Bob session 20 (same budget):** English-only app (/he and / redirect to /en/twin, language toggle removed), tighter click-to-focus close-ups, smaller translucent separation arrow and edge chips, breach toast bottom-right inside the canvas (02b93d6; manual fixes 5d9607b, 0f954b8: English names/fields/corrective-action text in the page data).
+
 **Manual work (not in Bob, done by hand after session 14 used up the first Bobcoin budget):**
 - `d2610c1`: pinned @react-three/postprocessing 2.x so it works with fiber 8 (the page crashed without it).
 - `d6a8b07`: breach threshold now matches the seed's 5 °C limit (before, the toast fired at 4.1 °C); the side panel refreshes live and shows English labels; analytic camera framing instead of drei Bounds; app opens in Live mode; decorative racks, pallets, pipes and conveyor.
@@ -167,5 +171,3 @@ All UI strings are in `src/i18n/{he,en}.json` — both files must have identical
 3. Click the Cooling station (3D or chip) to open the side panel: last 5 readings, with out-of-range values in red, and the limits.
 4. Click **✓ Apply corrective action**. The cooling CCP is reset to 3 °C, the toast closes and the ring turns green again. The header KPIs update live. If you keep watching, cooling drifts and breaches again about 45 s later, and the cooking CCP sometimes shows STALE for a few seconds (a simulated sensor dropout).
 5. **Live / Paused** toggles the simulation. Also try **Separation check** (raw→high-care and sesame cross-contact), **Edit mode** (drag stations), **Guided tour**, and the **עב/EN** switch.
-
-**Bob session 19 (same budget):** real-scale metal detector, chiller condensing unit, low-poly workers, click-to-focus camera + Back to overview, CCP label priority/RTL fix (227dab3; manual fixes 10382ee, ca5b672).

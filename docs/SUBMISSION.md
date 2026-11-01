@@ -1,7 +1,7 @@
 # Asadra Digital Twin — IBM Bob Israel Hackathon 2026
 
 **Team:** Asadra_3D_model
-**Live demo:** https://asadra-digital-twin.vercel.app/he/twin (English: https://asadra-digital-twin.vercel.app/en/twin)
+**Live demo:** https://asadra-digital-twin.vercel.app/en/twin
 **Repository:** https://github.com/ShirayK/asadra-digital-twin
 **Bob session evidence:** [`bob_sessions/`](../bob_sessions)
 
@@ -27,7 +27,7 @@ This is a standalone 3D digital twin of the production floor:
 The demo dataset is a hummus plant. In live mode its cooling CCP drifts above the 5 °C critical limit and raises a breach alert. The plant also has a sesame cross-contact zone.
 
 ### How IBM Bob was used
-The core app was written in 20 **IBM Bob IDE Task Sessions** (0–19): sessions 0–11 follow the prompts in `docs/SPEC.md` one by one, and sessions 12–14 add the equipment, the cinematic look and the live simulator. Everything after session 14 was done by hand (listed below). The sessions ran on the hackathon team instance (ibm-coding-challenge-2, us-east). After session 14 exhausted that budget, the organizers added a second team budget (TECHZONE-TS023239691), and **session 15** ran there: Asadra purple/white brand palette (`src/theme/asadra.ts`), constant-size readable labels with LOD dots, a toast stack, scrollable side panel, wider zoom-out and Fit/Top view buttons (commit `09226bc`, followed by a small manual fix `46e1a7f`). **Session 16** (same TECHZONE budget) added a true bounding-box Fit/Top view, a collapsible legend, label collision handling, readable 12px zone labels and purple lighting (`f10e1ae`; manual fixes `bc4935b`, `a7aa5ed`). **Session 17** switched to a light, bright theme (white/light-purple glass UI, light epoxy floor, new lighting, less bloom, 13px labels, Hebrew label wrapping, tighter fit) (`3fe3ad2`; manual fixes `3cf9b59`, `8b21791`). **Session 18** replaced generic shapes with recognizable equipment (receiving dock with pallets, steam kettles, stone mill, blast chiller, metal-detector arch over a conveyor, packaging line), thin floor outlines instead of thick rings, and separation warnings beside the stations (`441f6f4`; manual fixes `9e8a8b8`, `906df9f`). Each session's summary screenshot is in `bob_sessions/`.
+The core app was written in 21 **IBM Bob IDE Task Sessions** (0–20): sessions 0–11 follow the prompts in `docs/SPEC.md` one by one, and sessions 12–14 add the equipment, the cinematic look and the live simulator. Everything after session 14 was done by hand (listed below). The sessions ran on the hackathon team instance (ibm-coding-challenge-2, us-east). After session 14 exhausted that budget, the organizers added a second team budget (TECHZONE-TS023239691), and **session 15** ran there: Asadra purple/white brand palette (`src/theme/asadra.ts`), constant-size readable labels with LOD dots, a toast stack, scrollable side panel, wider zoom-out and Fit/Top view buttons (commit `09226bc`, followed by a small manual fix `46e1a7f`). **Session 16** (same TECHZONE budget) added a true bounding-box Fit/Top view, a collapsible legend, label collision handling, readable 12px zone labels and purple lighting (`f10e1ae`; manual fixes `bc4935b`, `a7aa5ed`). **Session 17** switched to a light, bright theme (white/light-purple glass UI, light epoxy floor, new lighting, less bloom, 13px labels, Hebrew label wrapping, tighter fit) (`3fe3ad2`; manual fixes `3cf9b59`, `8b21791`). **Session 18** replaced generic shapes with recognizable equipment (receiving dock with pallets, steam kettles, stone mill, blast chiller, metal-detector arch over a conveyor, packaging line), thin floor outlines instead of thick rings, and separation warnings beside the stations (`441f6f4`; manual fixes `9e8a8b8`, `906df9f`). **Session 19** added a compact real-scale metal detector, a chiller condensing unit, low-poly workers, click-to-focus camera with Back to overview, and CCP label priority (`227dab3`; manual fixes `10382ee`, `ca5b672`). **Session 20** made the app English-only (/he and / redirect to /en/twin, no language toggle), tightened click-to-focus close-ups, made separation warnings subtler and moved the breach toast inside the canvas (`02b93d6`; manual fixes `5d9607b`, `0f954b8` so no Hebrew data reaches the page). Each session's summary screenshot is in `bob_sessions/`.
 
 | # | Bob session | Commit |
 |---|-------------|--------|
@@ -66,7 +66,7 @@ Screenshot commits: `28384d4`, `91110d7`, `a5f48d5`, `dd497e2`, `04f6cf4`.
 ```bash
 git clone https://github.com/ShirayK/asadra-digital-twin && cd asadra-digital-twin
 npm install
-npm run dev      # http://localhost:3000/he/twin
+npm run dev      # http://localhost:3000/en/twin
 npm test         # vitest
 npm run build
 ```
@@ -99,13 +99,13 @@ No environment variables or API keys are needed. The data comes from `data/seed/
 - עברית (RTL) ואנגלית.
 
 ### איך השתמשנו ב-IBM Bob
-כל קוד הפיצ'רים נכתב ב-**Bob IDE Task Sessions**: 15 סשנים (0–14) בחשבון ההאקתון (us-east): 0–11 לפי הפרומפטים ב-`docs/SPEC.md`, ו-12–14 לשדרוג המראה ולסימולציה החיה. סשן 14 נעצר כשנגמר תקציב 50 ה-Bobcoins, לפני הקומיט. כל מה שנעשה אחריו נעשה ידנית: תיקונים (`d2610c1`, `d6a8b07`), ליטוש עיצובי (`c5df2dc`): ערכת עיצוב כהה, כותרת עם מדדי KPI ושעון, סיור באנגלית, מחזורי חריגה חוזרים, ציוד ועובדים מפורטים, שכבת הפרדה בולטת ומעוף מצלמה בפתיחה, וליטוש אחרון. לאחר מכן נוסף תקציב שני לצוות (TECHZONE-TS023239691), ובו רץ **סשן 15** ב-Bob: צבעי המותג של אסדרא (סגול ולבן), תוויות קריאות בגודל קבוע, ערימת התראות, פאנל צד נגלל, זום אאוט רחב וכפתורי Fit/Top view (`09226bc`, ותיקון ידני קטן `46e1a7f`). **סשן 16** (באותו תקציב) הוסיף Fit/Top view אמיתיים לפי גבולות המפעל, מקרא מתקפל, מניעת חפיפת תוויות, תוויות אזור קריאות ותאורה סגולה (`f10e1ae`, ותיקונים ידניים `bc4935b`, `a7aa5ed`). **סשן 17** עבר לעיצוב בהיר: ממשק זכוכית לבן/סגול בהיר, רצפת אפוקסי בהירה, תאורה חדשה, פחות bloom ותוויות 13px (`3fe3ad2`, ותיקונים ידניים `3cf9b59`, `8b21791`). **סשן 18** החליף צורות כלליות בציוד מזוהה (רמפת קבלה עם משטחים, סירי בישול בקיטור, טחנת אבן, מקרר הלם, קשת גלאי מתכות על מסוע, קו אריזה), קווי רצפה דקים במקום טבעות עבות, והתראות הפרדה ליד התחנות (`441f6f4`, ותיקונים ידניים `9e8a8b8`, `906df9f`). צילומי הסיכום נמצאים ב-`bob_sessions/`, וטבלת הקומיטים מופיעה למעלה.
+כל קוד הפיצ'רים נכתב ב-**Bob IDE Task Sessions**: 15 סשנים (0–14) בחשבון ההאקתון (us-east): 0–11 לפי הפרומפטים ב-`docs/SPEC.md`, ו-12–14 לשדרוג המראה ולסימולציה החיה. סשן 14 נעצר כשנגמר תקציב 50 ה-Bobcoins, לפני הקומיט. כל מה שנעשה אחריו נעשה ידנית: תיקונים (`d2610c1`, `d6a8b07`), ליטוש עיצובי (`c5df2dc`): ערכת עיצוב כהה, כותרת עם מדדי KPI ושעון, סיור באנגלית, מחזורי חריגה חוזרים, ציוד ועובדים מפורטים, שכבת הפרדה בולטת ומעוף מצלמה בפתיחה, וליטוש אחרון. לאחר מכן נוסף תקציב שני לצוות (TECHZONE-TS023239691), ובו רץ **סשן 15** ב-Bob: צבעי המותג של אסדרא (סגול ולבן), תוויות קריאות בגודל קבוע, ערימת התראות, פאנל צד נגלל, זום אאוט רחב וכפתורי Fit/Top view (`09226bc`, ותיקון ידני קטן `46e1a7f`). **סשן 16** (באותו תקציב) הוסיף Fit/Top view אמיתיים לפי גבולות המפעל, מקרא מתקפל, מניעת חפיפת תוויות, תוויות אזור קריאות ותאורה סגולה (`f10e1ae`, ותיקונים ידניים `bc4935b`, `a7aa5ed`). **סשן 17** עבר לעיצוב בהיר: ממשק זכוכית לבן/סגול בהיר, רצפת אפוקסי בהירה, תאורה חדשה, פחות bloom ותוויות 13px (`3fe3ad2`, ותיקונים ידניים `3cf9b59`, `8b21791`). **סשן 18** החליף צורות כלליות בציוד מזוהה (רמפת קבלה עם משטחים, סירי בישול בקיטור, טחנת אבן, מקרר הלם, קשת גלאי מתכות על מסוע, קו אריזה), קווי רצפה דקים במקום טבעות עבות, והתראות הפרדה ליד התחנות (`441f6f4`, ותיקונים ידניים `9e8a8b8`, `906df9f`). **סשן 19** הוסיף גלאי מתכות בקנה מידה אמיתי, יחידת קירור, עובדים ומצלמה שמתמקדת בתחנה בלחיצה (`227dab3`, ותיקונים ידניים `10382ee`, `ca5b672`). **סשן 20** הפך את האפליקציה לאנגלית בלבד (/he ו-/ מפנים ל-/en/twin), הידק את התקריבים, עידן את התראות ההפרדה והעביר את הודעת החריגה לתוך הקנבס (`02b93d6`, ותיקונים ידניים `5d9607b`, `0f954b8`). צילומי הסיכום נמצאים ב-`bob_sessions/`, וטבלת הקומיטים מופיעה למעלה.
 
 ### איך מדגימים
-פותחים את /he/twin. האפליקציה נפתחת במצב חי, ותוך 10–20 שניות ה-CCP של הקירור חורג מ-5°C: הטבעת מהבהבת באדום ומופיעה התראה. לוחצים "בצע פעולה מתקנת" והתחנה חוזרת לירוק. הכפתור חי/מושהה עוצר את הסימולציה.
+פותחים את /en/twin. האפליקציה נפתחת במצב חי, ותוך 10–20 שניות ה-CCP של הקירור חורג מ-5°C: הטבעת מהבהבת באדום ומופיעה התראה. לוחצים "בצע פעולה מתקנת" והתחנה חוזרת לירוק. הכפתור חי/מושהה עוצר את הסימולציה.
 
 ### הרצה
-`npm install && npm run dev` ואז לפתוח http://localhost:3000/he/twin. אין צורך במפתחות.
+`npm install && npm run dev` ואז לפתוח http://localhost:3000/en/twin. אין צורך במפתחות.
 
 ### חזון ומפת דרכים
 1. **פריסה אוטומטית מתמונת תוכנית קומה בעזרת AI:** מצלמים את תוכנית המפעל, ומודל ראייה מחלץ אזורים ותחנות ל-JSON.
@@ -113,6 +113,3 @@ No environment variables or API keys are needed. The data comes from `data/seed/
 3. מצב ביקורת, הפעלה חוזרת של יום, ודוח למבקר.
 4. חיישני IoT.
 5. השוואה בין מפעלים.
-
-- **Session 19** (227dab3, manual fixes 10382ee, ca5b672): compact real-scale metal detector, chiller condensing unit, low-poly workers, click-to-focus camera with Back to overview, CCP label priority/RTL fix, separation chips beside the conveyor.
-- **סשן 19**: גלאי מתכות בקנה מידה אמיתי, יחידת קירור, עובדים, מצלמה שמתמקדת בתחנה בלחיצה עם חזרה למבט כללי, תיקון תוויות ו-RTL.
