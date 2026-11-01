@@ -267,7 +267,7 @@ function PlatformScale({
       {/* Display screen */}
       <mesh position={[0.15 * s, 0.62 * s, 0.09 * s]} rotation={[-0.3, 0, 0]}>
         <boxGeometry args={[0.1 * s, 0.04 * s, 0.005 * s]} />
-        <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={1.0} roughness={0.1} />
+        <meshStandardMaterial color="#c4b5fd" emissive="#7c3aed" emissiveIntensity={1.0} roughness={0.1} />
       </mesh>
     </group>
   );
@@ -298,7 +298,7 @@ export function SoakingTankModel({ scale: s = 1 }: { scale?: number }) {
       {/* Water surface (teal/blue, slightly transparent) */}
       <mesh position={[0, h * 0.32, 0]}>
         <cylinderGeometry args={[r * 0.97, r * 0.97, 0.01 * s, 24]} />
-        <meshStandardMaterial color="#38bdf8" transparent opacity={0.72} roughness={0.05} metalness={0} emissive="#0ea5e9" emissiveIntensity={0.15} />
+        <meshStandardMaterial color="#e9e5f5" transparent opacity={0.72} roughness={0.05} metalness={0} emissive="#a78bfa" emissiveIntensity={0.15} />
       </mesh>
       {/* Weld seam rings */}
       {[-h * 0.2, h * 0.2].map((y, i) => (
@@ -310,7 +310,7 @@ export function SoakingTankModel({ scale: s = 1 }: { scale?: number }) {
       {/* Sight glass on side */}
       <mesh position={[r + 0.015 * s, 0, 0]}>
         <boxGeometry args={[0.025 * s, h * 0.7, 0.08 * s]} />
-        <meshStandardMaterial color="#bae6fd" transparent opacity={0.8} roughness={0.05} metalness={0.1} emissive="#7dd3fc" emissiveIntensity={0.2} />
+        <meshStandardMaterial color="#f1eefb" transparent opacity={0.8} roughness={0.05} metalness={0.1} emissive="#c4b5fd" emissiveIntensity={0.2} />
       </mesh>
       {/* Fill pipe (inlet top) */}
       <mesh position={[0, h / 2 + 0.18 * s, r * 0.5]} rotation={[0.4, 0, 0]}>
@@ -551,7 +551,7 @@ export function StoneMill({ scale: s = 1 }: { scale?: number }) {
       {/* Hopper viewing window */}
       <mesh position={[0.25 * s, 1.45 * s, 0]}>
         <boxGeometry args={[0.03 * s, 0.22 * s, 0.1 * s]} />
-        <meshStandardMaterial color="#bae6fd" transparent opacity={0.75} roughness={0.05} emissive="#7dd3fc" emissiveIntensity={0.1} />
+        <meshStandardMaterial color="#f1eefb" transparent opacity={0.75} roughness={0.05} emissive="#c4b5fd" emissiveIntensity={0.1} />
       </mesh>
 
       {/* Motor block */}
@@ -657,7 +657,7 @@ export function ChillerModel({ scale: s = 1 }: { scale?: number }) {
       {/* Temperature display strip at top */}
       <mesh position={[0, h * 0.92, d / 2 + 0.01 * s]}>
         <boxGeometry args={[w * 0.55, 0.055 * s, 0.012 * s]} />
-        <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={1.5} roughness={0.1} toneMapped={false} />
+        <meshStandardMaterial color="#c4b5fd" emissive="#7c3aed" emissiveIntensity={1.5} roughness={0.1} toneMapped={false} />
       </mesh>
       {/* Display label box */}
       <mesh position={[0, h * 0.92, d / 2 + 0.02 * s]}>
