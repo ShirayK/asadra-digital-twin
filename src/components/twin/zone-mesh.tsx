@@ -92,7 +92,7 @@ export default function ZoneMesh({ zone, locale }: ZoneMeshProps) {
               flexShrink: 0,
             }}
           />
-          {locale === 'en' && zone.nameEn ? zone.nameEn : zone.name}
+          {zone.nameEn ?? zone.name}
           {zone.allergenCodes.length > 0 && (
             <span style={{ color: '#b91c1c', fontSize: '11px' }}>
               ⚠ {zone.allergenCodes.join(', ')}

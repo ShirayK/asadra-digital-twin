@@ -27,9 +27,8 @@ const FIELD_LABEL_EN: Record<string, string> = {
   test_passed: 'Test passed',
   seal_ok: 'Seal OK',
 };
-function fieldLabel(locale: string, key: string, label?: string): string {
-  if (locale === 'en' && FIELD_LABEL_EN[key]) return FIELD_LABEL_EN[key];
-  return label ?? key;
+function fieldLabel(_locale: string, key: string, label?: string): string {
+  return FIELD_LABEL_EN[key] ?? label ?? key;
 }
 
 /**
@@ -64,7 +63,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
   return (
     <div
       role="complementary"
-      aria-label={locale === 'en' && station.nameEn ? station.nameEn : station.name}
+      aria-label={station.nameEn ?? station.name}
       style={{
         position: 'fixed',
         top: 0,
@@ -113,7 +112,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
               overflowWrap: 'anywhere',
             }}
           >
-            {locale === 'en' && station.nameEn ? station.nameEn : station.name}
+            {station.nameEn ?? station.name}
           </h2>
 
           {/* Control type badge */}

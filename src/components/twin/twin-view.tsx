@@ -2,10 +2,9 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import type { TwinDTO, StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
-import { getDictionary, locales } from '@/i18n';
+import { getDictionary } from '@/i18n';
 import { loadOverlay, saveOverlay, clearOverlay } from '@/adapters/local-overlay';
 import type { LayoutOverlay } from '@/adapters/local-overlay';
 import { TwinDatasetSchema } from '@/domain/schema';
@@ -51,7 +50,7 @@ interface Toast {
  */
 export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   const t = getDictionary(locale);
-  const dir = locale === 'he' ? 'rtl' : 'ltr';
+  const dir = 'ltr' as const;
 
   const [selectedStation, setSelectedStation] = useState<StationDTO | null>(null);
   const [showFlow, setShowFlow] = useState(true);
@@ -226,9 +225,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
         const limitLabel = coolingStation?.fields.find((f) => f.key === 'temp')?.max ?? COOLING_LIMIT;
         pushToast({
           kind: 'breach',
-          message: locale === 'he'
-            ? `חריגת CCP: קירור ${temp}°C > ${limitLabel}°C`
-            : `CCP breach: Cooling ${temp}°C > ${limitLabel}°C`,
+          message: `CCP breach: Cooling ${temp}°C > ${limitLabel}°C`,
         });
       }
       if (!next.coolingBreaching) {
@@ -390,17 +387,6 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
         onClose={() => setSelectedStation(null)}
       />
 
-      {/* ── Toast stack (replaces inline breach banner) ──────────────────────── */}
-      <ToastStack
-        toasts={toasts}
-        dir={dir}
-        panelOpen={panelOpen}
-        locale={locale}
-        onDismiss={dismissToast}
-        onCorrectiveAction={handleCorrectiveAction}
-        t={t}
-      />
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <TwinHeader dto={liveDto} locale={locale} dir={dir} liveMode={liveMode} />
 
@@ -475,33 +461,6 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             </button>
           )}
 
-          {/* Separator */}
-          <span style={{ width: '1px', height: '1.5rem', background: `${brand[300]}66` }} />
-
-          {/* Language switcher */}
-          <div
-            style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', fontSize: '0.8rem' }}
-            aria-label={t.nav.language}
-          >
-            {locales.map((l) => (
-              <Link
-                key={l}
-                href={`/${l}/twin`}
-                style={{
-                  padding: '0.2rem 0.55rem',
-                  borderRadius: radius.pill,
-                  border: '1px solid',
-                  borderColor: l === locale ? brand[500] : `${brand[300]}66`,
-                  background: l === locale ? brand[700] : 'rgba(255,255,255,0.85)',
-                  color: l === locale ? '#fff' : brand[500],
-                  fontWeight: l === locale ? 700 : 400,
-                  textDecoration: 'none',
-                }}
-              >
-                {l === 'he' ? 'עב' : 'EN'}
-              </Link>
-            ))}
-          </div>
         </div>
 
         {/* Edit mode banner */}
@@ -549,7 +508,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           }}
         >
           {liveDto.stations.map((station) => {
-            const displayName = locale === 'en' && station.nameEn ? station.nameEn : station.name;
+            const displayName = station.nameEn ?? station.name;
             const sc = stationColor(station.status);
             return (
               <button
@@ -605,6 +564,16 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
 
         {/* ── 3-D Canvas ───────────────────────────────────────────────────────── */}
         <div style={{ position: 'relative' }}>
+          {/* ── Toast stack — bottom-right inside the canvas area ── */}
+          <ToastStack
+            toasts={toasts}
+            dir={dir}
+            panelOpen={panelOpen}
+            locale={locale}
+            onDismiss={dismissToast}
+            onCorrectiveAction={handleCorrectiveAction}
+            t={t}
+          />
           <TwinCanvas
             dto={liveDto}
             locale={locale}
@@ -631,7 +600,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               style={{
                 position: 'absolute',
                 top: '12px',
-                [dir === 'rtl' ? 'left' : 'right']: '12px',
+                right: '12px',
                 padding: '0.35rem 0.85rem',
                 borderRadius: radius.pill,
                 background: 'rgba(255,255,255,0.92)',
@@ -709,7 +678,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <ul
             style={{
               margin: 0,
-              padding: dir === 'rtl' ? '0 1.25rem 0 0' : '0 0 0 1.25rem',
+              padding: '0 0 0 1.25rem',
               fontSize: '0.875rem',
               color: '#b91c1c',
               direction: dir,
@@ -731,8 +700,9 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
 }
 
 // ── ToastStack ────────────────────────────────────────────────────────────────
-// Fixed, top 72px, centered. Uses CSS logical properties.
-// When panel is open, inset-inline-end = 340px + 16px to stay in the free area.
+// Absolutely positioned inside the canvas container — bottom-right corner.
+// At 1920px width the panel is 340px wide; we use right:16px so the toast never
+// overlaps the issues list below the canvas.
 
 interface ToastStackProps {
   toasts: Toast[];
@@ -747,24 +717,20 @@ interface ToastStackProps {
 function ToastStack({ toasts, dir, panelOpen, locale, onDismiss, onCorrectiveAction, t }: ToastStackProps) {
   if (toasts.length === 0) return null;
 
-  // When panel is open, shift the toast stack away from the panel edge
-  const insetInlineEnd = panelOpen ? '356px' : '16px';
-
   return (
     <div
       style={{
-        position: 'fixed',
-        bottom: '28px',
-        // Centered by default; when panel is open we push toward the free side
-        insetInlineEnd,
-        left: panelOpen ? 'auto' : '50%',
-        transform: panelOpen ? 'none' : 'translateX(-50%)',
-        width: 'min(520px, calc(100vw - 32px))',
-        zIndex: 100,
+        position: 'absolute',
+        bottom: '16px',
+        // Keep left of the side panel when it is open
+        right: panelOpen ? '356px' : '16px',
+        width: 'min(420px, calc(100% - 32px))',
+        zIndex: 20,
         display: 'flex',
         flexDirection: 'column',
         gap: '0.5rem',
         direction: dir,
+        pointerEvents: 'none', // let clicks through to the canvas
       }}
     >
       {toasts.map((toast) => (
@@ -814,7 +780,7 @@ function ToastItem({
         fontSize: '0.9rem',
         color: '#1c1830',
         fontWeight: 500,
-        // No pulse on the container — pulse icon only
+        pointerEvents: 'auto', // re-enable clicks on the toast item itself
       }}
     >
       {/* Icon — pulsed for breach */}
@@ -936,7 +902,7 @@ function TwinHeader({
   const ccps = dto.stations.filter((s) => s.controlType === 'CCP');
   const ok = ccps.filter((s) => s.status === 'OK').length;
   const open = dto.stations.filter((s) => s.status === 'OUT_OF_RANGE').length;
-  const he = locale === 'he';
+  // English-only: he conditional removed
 
   const kpi = (label: string, value: string, color: string) => (
     <div
@@ -1016,7 +982,7 @@ function TwinHeader({
             ASADRA
           </div>
           <h1 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: brand[400] }}>
-            {t.twin.title} — {locale === 'en' && dto.siteNameEn ? dto.siteNameEn : dto.siteName}
+            {t.twin.title} — {dto.siteNameEn ?? dto.siteName}
           </h1>
         </div>
       </div>
@@ -1024,19 +990,11 @@ function TwinHeader({
       <div style={{ flex: 1 }} />
 
       {/* KPI tiles */}
+      {kpi('CCPs OK', `${ok}/${ccps.length}`, ok === ccps.length ? themeStatus.ok : themeStatus.deviation)}
+      {kpi('Open deviations', String(open), open ? themeStatus.deviation : themeStatus.ok)}
       {kpi(
-        he ? 'נקודות CCP תקינות' : 'CCPs OK',
-        `${ok}/${ccps.length}`,
-        ok === ccps.length ? themeStatus.ok : themeStatus.deviation,
-      )}
-      {kpi(
-        he ? 'חריגות פתוחות' : 'Open deviations',
-        String(open),
-        open ? themeStatus.deviation : themeStatus.ok,
-      )}
-      {kpi(
-        he ? 'שלמות שרשרת' : 'Chain integrity',
-        dto.chainResult.valid ? (he ? 'מאומתת ✓' : 'Verified ✓') : (he ? 'שבורה' : 'Broken'),
+        'Chain integrity',
+        dto.chainResult.valid ? 'Verified ✓' : 'Broken',
         dto.chainResult.valid ? themeStatus.ok : themeStatus.expiring,
       )}
 
@@ -1051,7 +1009,7 @@ function TwinHeader({
           }}
           suppressHydrationWarning
         >
-          {now ? now.toLocaleTimeString(he ? 'he-IL' : 'en-GB') : '--:--:--'}
+          {now ? now.toLocaleTimeString('en-GB') : '--:--:--'}
         </div>
         <div style={{ fontSize: '0.7rem', color: liveMode ? themeStatus.ok : brand[300], letterSpacing: '0.1em' }}>
           {liveMode ? '● LIVE' : '❚❚ PAUSED'}

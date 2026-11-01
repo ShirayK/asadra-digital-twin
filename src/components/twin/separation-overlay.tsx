@@ -82,15 +82,13 @@ function IssueSegment({
   const Y = 0.35;
   const from: [number, number, number] = [resolved.from.x, Y, resolved.from.z];
   const to: [number, number, number] = [resolved.to.x, Y, resolved.to.z];
-  // Midpoint of the edge segment in world space
-  const rawMidX = (resolved.from.x + resolved.to.x) / 2;
-  const rawMidZ = (resolved.from.z + resolved.to.z) / 2;
-  // Offset the chip AWAY from the belt/conveyor line — perpendicular offset in Z,
-  // raised high enough (Y > belt height ≈ 2.16) so it floats above equipment.
-  // Stagger multiple chips along Z so they don't overlap each other.
+  // Place the chip at the ZONE BOUNDARY: 75% along the edge toward the destination
+  // (where the separation violation actually occurs) rather than at the midpoint.
+  // Stagger multiple chips slightly to avoid overlap.
+  const BOUNDARY_T = 0.75;
   const mid = {
-    x: rawMidX,
-    z: rawMidZ + 3.2 + index * 1.2,
+    x: resolved.from.x + (resolved.to.x - resolved.from.x) * BOUNDARY_T,
+    z: resolved.from.z + (resolved.to.z - resolved.from.z) * BOUNDARY_T + index * 0.9,
   };
 
   const tooltipText = t.separation[resolved.issue.kind];
@@ -167,20 +165,23 @@ function IssueSegment({
         />
       </mesh>
 
-      {/* Floating 3-D warning icon — raised above conveyor */}
+      {/* Floating 3-D warning icon — small and semi-transparent */}
       <group ref={iconRef} position={[mid.x, BADGE_Y - 1.2, mid.z]}>
         <mesh>
-          <cylinderGeometry args={[0.7, 0.7, 0.12, 3]} />
+          {/* Reduced from 0.7 to 0.38 radius; semi-transparent */}
+          <cylinderGeometry args={[0.38, 0.38, 0.08, 3]} />
           <meshStandardMaterial
             color="#facc15"
             emissive="#f59e0b"
-            emissiveIntensity={1.2}
+            emissiveIntensity={0.6}
+            transparent
+            opacity={0.55}
             toneMapped={false}
           />
         </mesh>
         <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.95, 0.05, 8, 32]} />
-          <meshBasicMaterial color={themeStatus.deviation} toneMapped={false} />
+          <torusGeometry args={[0.50, 0.04, 8, 24]} />
+          <meshBasicMaterial color={themeStatus.deviation} transparent opacity={0.5} toneMapped={false} />
         </mesh>
       </group>
 
@@ -189,6 +190,7 @@ function IssueSegment({
        * No distanceFactor → constant screen size.
        * zIndexRange keeps it under the UI panels (zIndex 30+).
        */}
+      {/* Compact badge at zone boundary edge */}
       <Html
         position={[mid.x, BADGE_Y, mid.z]}
         center
@@ -197,15 +199,15 @@ function IssueSegment({
       >
         <div
           style={{
-            background: `rgba(120,20,20,0.92)`,
-            border: `1px solid ${themeStatus.deviation}`,
+            background: `rgba(120,20,20,0.82)`,
+            border: `1px solid ${themeStatus.deviation}88`,
             color: '#fff',
-            fontSize: '11px',
-            fontWeight: 700,
-            padding: '2px 9px',
+            fontSize: '10px',
+            fontWeight: 600,
+            padding: '1px 6px',
             borderRadius: 999,
             whiteSpace: 'nowrap',
-            boxShadow: `0 0 12px rgba(220,38,38,0.6)`,
+            boxShadow: `0 0 6px rgba(220,38,38,0.35)`,
           }}
         >
           ⚠ {tooltipText}{allergenSuffix}

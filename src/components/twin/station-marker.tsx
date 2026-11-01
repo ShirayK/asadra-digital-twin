@@ -288,7 +288,7 @@ export default function StationMarker({
   const isCCP = station.controlType === 'CCP';
   const showFullLabel = (closeCamera || selected || isOutOfRange) &&
     (!occluded || isCCP || selected || isOutOfRange);
-  const displayName = locale === 'en' && station.nameEn ? station.nameEn : station.name;
+  const displayName = station.nameEn ?? station.name;
 
   return (
     <group

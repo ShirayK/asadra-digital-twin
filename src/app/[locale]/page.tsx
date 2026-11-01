@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getDictionary, locales, defaultLocale, type Locale } from '@/i18n';
 
@@ -5,6 +6,12 @@ export default function HomePage({ params }: { params: { locale: string } }) {
   const locale = (locales.includes(params.locale as Locale)
     ? params.locale
     : defaultLocale) as Locale;
+
+  // Any non-English locale hits this page — redirect to /en/twin
+  if (locale !== 'en') {
+    redirect('/en/twin');
+  }
+
   const t = getDictionary(locale);
 
   return (
@@ -35,22 +42,6 @@ export default function HomePage({ params }: { params: { locale: string } }) {
       >
         {t.home.cta}
       </Link>
-
-      {/* Locale switcher */}
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-        {locales.map((l) => (
-          <Link
-            key={l}
-            href={`/${l}`}
-            style={{
-              color: l === locale ? 'var(--color-accent)' : 'var(--color-muted)',
-              fontWeight: l === locale ? 700 : 400,
-            }}
-          >
-            {l === 'he' ? 'עברית' : 'English'}
-          </Link>
-        ))}
-      </div>
     </main>
   );
 }

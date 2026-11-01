@@ -105,7 +105,7 @@ export default function TwinToolbar({
         style={toggleStyle(liveMode, status.ok)}
       >
         <span style={{ fontSize: '0.8rem' }}>{liveMode ? '⏸' : '▶'}</span>
-        {locale === 'he' ? (liveMode ? 'חי' : 'מושהה') : liveMode ? 'Live' : 'Paused'}
+        {liveMode ? 'Live' : 'Paused'}
       </button>
 
       {/* Separator */}

@@ -18,11 +18,11 @@ export default function LocaleLayout({
   children: React.ReactNode;
   params: { locale: string };
 }) {
+  // Always English, always LTR
   const locale = (locales.includes(params.locale as Locale) ? params.locale : defaultLocale) as Locale;
-  const dir = locale === 'he' ? 'rtl' : 'ltr';
 
   return (
-    <html lang={locale} dir={dir}>
+    <html lang={locale} dir="ltr">
       <body>{children}</body>
     </html>
   );

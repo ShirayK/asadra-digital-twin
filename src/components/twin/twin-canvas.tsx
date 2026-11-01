@@ -349,15 +349,21 @@ function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, c
 
   /**
    * Compute a close-up perspective of a station at world position (x, z).
-   * Camera moves to ~8 units above and ~10 units behind/beside the station,
-   * orbit target is the station position at y=1 (equipment midpoint).
+   * Frames the machine so it fills ~60% of canvas height.
+   * Camera at 40° elevation, orbit target at the machine center (y=2).
    */
   const computeFocusPos = useCallback((x: number, z: number): { pos: THREE.Vector3; orbitTarget: THREE.Vector3 } => {
     const orbitTarget = new THREE.Vector3(x, 2.0, z);
-    // Close-up: position camera at a 35° elevation, 10 units away, slightly angled
-    const closeD = 15;
-    const posY  = 2.0 + closeD * Math.sin(38 * Math.PI / 180);
-    const posZOff = closeD * Math.cos(38 * Math.PI / 180);
+    // A typical machine is ~4 u tall. To fill 60% of canvas height:
+    //   visibleH = 2 * dist * tan(FOV/2);  machineH / visibleH = 0.60
+    //   => dist = machineH / (2 * 0.60 * tan(FOV/2))
+    const FOV_RAD = (40 * Math.PI) / 180;
+    const MACHINE_H = 4.0;
+    const dist = MACHINE_H / (2 * 0.60 * Math.tan(FOV_RAD / 2));
+    const EL_DEG = 40; // 40° elevation — within the requested 35–45° range
+    const EL_RAD = (EL_DEG * Math.PI) / 180;
+    const posY = orbitTarget.y + dist * Math.sin(EL_RAD);
+    const posZOff = dist * Math.cos(EL_RAD);
     return {
       pos: new THREE.Vector3(x, posY, z + posZOff),
       orbitTarget,
