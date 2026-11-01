@@ -133,7 +133,7 @@ export default function TwinCanvas({
     cameraActionRef.current = {
       fitView: () => { fitViewTrigger.current += 1; },
       topView: () => { topViewTrigger.current += 1; },
-      focusStation: (x: number, z: number) => { focusTrigger.current = { x, z }; },
+      focusStation: (x: number, z: number) => { setUserInteracted(true); focusTrigger.current = { x, z }; },
     };
   }
 
