@@ -299,7 +299,7 @@ function CameraActions({ fitTrigger, topTrigger, sceneW, sceneD, cx, cz, orbitRe
     // Half-angles for both axes
     const hFovRad = Math.atan(Math.tan(FOV_RAD / 2) * aspect);
     // Distance needed to fill ~80% of canvas — tighter margin than before
-    const MARGIN = 0.90;
+    const MARGIN = 1.1;
     const dForWidth = (sceneW / 2 * MARGIN) / Math.tan(hFovRad);
     const dForDepth = (sceneD / 2 * MARGIN * 0.75) / Math.tan(FOV_RAD / 2); // depth is foreshortened at 45°
     const dist = Math.max(dForWidth, dForDepth);
