@@ -38,7 +38,8 @@
     "fitView": "התאם תצוגה",
     "topView": "מבט מלמעלה",
     "correctiveAction": "בצע פעולה מתקנת",
-    "dismiss": "סגור"
+    "dismiss": "סגור",
+    "backToOverview": "← חזרה לתצוגה כללית"
   },
   "status": {
     "OK": "תקין",

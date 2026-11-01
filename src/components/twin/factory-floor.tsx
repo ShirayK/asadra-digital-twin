@@ -8,6 +8,7 @@ interface FactoryFloorProps {
   widthM: number;
   depthM: number;
   zones?: Zone[];
+  onDoubleClick?: () => void;
 }
 
 /** Wall height in metres — lowered so interior is visible from overhead angle */
@@ -35,7 +36,7 @@ const ZONE_BORDER: Record<string, string> = {
  * - Low perimeter walls (1 m) in light off-white / stainless steel tone
  * - No ceiling beams (open bright factory feel)
  */
-export default function FactoryFloor({ widthM, depthM, zones = [] }: FactoryFloorProps) {
+export default function FactoryFloor({ widthM, depthM, zones = [], onDoubleClick }: FactoryFloorProps) {
   const cx = widthM / 2;
   const cz = depthM / 2;
 
@@ -105,7 +106,12 @@ export default function FactoryFloor({ widthM, depthM, zones = [] }: FactoryFloo
   return (
     <group>
       {/* ── Light epoxy floor — white/grey with a very subtle purple shimmer ── */}
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0, cz]}>
+      <mesh
+        receiveShadow
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[cx, 0, cz]}
+        onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(); }}
+      >
         <planeGeometry args={[widthM, depthM]} />
         <meshStandardMaterial
           color="#f0eff8"

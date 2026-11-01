@@ -38,7 +38,8 @@
     "fitView": "Fit view",
     "topView": "Top view",
     "correctiveAction": "Apply corrective action",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "backToOverview": "← Back to overview"
   },
   "status": {
     "OK": "OK",

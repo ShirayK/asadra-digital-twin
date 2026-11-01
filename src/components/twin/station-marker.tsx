@@ -174,11 +174,13 @@ export default function StationMarker({
   const [occluded, setOccluded] = useState(false);
 
   // Compute this label's priority
+  // CCP stations always show at least priority 1 so they aren't suppressed by
+  // lower-importance labels.  OUT_OF_RANGE > selected > CCP/separation > normal.
   const priority: LabelPriority = isOutOfRange
     ? 3
     : selected
     ? 2
-    : hasSeparationWarning
+    : (hasSeparationWarning || station.controlType === 'CCP')
     ? 1
     : 0;
 
@@ -281,8 +283,11 @@ export default function StationMarker({
   );
 
   // Decide whether to show full label or dot
-  // Occluded by higher-priority label → show dot
-  const showFullLabel = (closeCamera || selected || isOutOfRange) && !occluded;
+  // CCP labels always show when camera is close (never occlude them while close).
+  // Other labels: occluded by higher-priority label → show dot.
+  const isCCP = station.controlType === 'CCP';
+  const showFullLabel = (closeCamera || selected || isOutOfRange) &&
+    (!occluded || isCCP || selected || isOutOfRange);
   const displayName = locale === 'en' && station.nameEn ? station.nameEn : station.name;
 
   return (
@@ -337,29 +342,34 @@ export default function StationMarker({
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           {showFullLabel ? (
-            /* Full label — 13px, light glass, max 180px, wraps to 2 lines for Hebrew */
-            <div
-              title={displayName}
-              style={{
-                background: `rgba(255,255,255,0.92)`,
-                color: '#1c1830',
-                fontSize: '13px',
-                fontWeight: 600,
-                padding: '2px 7px',
-                borderRadius: '6px',
-                maxWidth: '180px',
-                width: 'max-content',
-                whiteSpace: 'normal',
-                overflowWrap: 'normal',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                border: `1px solid ${color}55`,
-                backdropFilter: 'blur(6px)',
-                boxShadow: `0 1px 6px rgba(104,65,176,0.18)`,
-                lineHeight: 1.3,
-              }}
-            >
+              /* Full label — 13px, light glass, max 140px, no-wrap to prevent browser push */
+              <div
+                title={displayName}
+                style={{
+                  background: `rgba(255,255,255,0.92)`,
+                  color: '#1c1830',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  maxWidth: '140px',
+                  width: 'max-content',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  border: `1px solid ${color}55`,
+                  backdropFilter: 'blur(6px)',
+                  boxShadow: `0 1px 6px rgba(104,65,176,0.18)`,
+                  lineHeight: 1.3,
+                  // Prevent browser layout from pushing the pill off-center
+                  position: 'relative',
+                  left: 0,
+                  transform: 'none',
+                }}
+              >
               <span
                 style={{
                   display: 'inline-block',

@@ -30,8 +30,14 @@ interface TwinCanvasProps {
   tourActive?: boolean;
   onStationClick?: (station: StationDTO) => void;
   onStationMove?: (id: string, x: number, z: number) => void;
-  /** Ref forwarded in so TwinView can trigger fit/top camera moves */
-  cameraActionRef?: React.MutableRefObject<{ fitView: () => void; topView: () => void } | null>;
+  /** Called when the user double-clicks the floor (triggers fit view from parent) */
+  onFloorDoubleClick?: () => void;
+  /** Ref forwarded in so TwinView can trigger fit/top/focus camera moves */
+  cameraActionRef?: React.MutableRefObject<{
+    fitView: () => void;
+    topView: () => void;
+    focusStation: (x: number, z: number) => void;
+  } | null>;
 }
 
 /**
@@ -51,6 +57,7 @@ export default function TwinCanvas({
   tourActive = false,
   onStationClick,
   onStationMove,
+  onFloorDoubleClick,
   cameraActionRef,
 }: TwinCanvasProps) {
   const handleStationClick = useCallback(
@@ -110,20 +117,23 @@ export default function TwinCanvas({
   const camY = fitDist * 0.82;
   const camZ = cz + fitDist * 0.68;
 
+  const [focusAnimating, setFocusAnimating] = useState(false);
   const autoRotate = !userInteracted && !editMode && !tourActive;
-  const frameloop: 'always' | 'demand' = editMode || tourActive || autoRotate ? 'always' : 'demand';
+  const frameloop: 'always' | 'demand' = editMode || tourActive || autoRotate || focusAnimating ? 'always' : 'demand';
 
-  // ── Fit / Top camera actions ───────────────────────────────────────────────
+  // ── Fit / Top / Focus camera actions ──────────────────────────────────────
   // We expose these via cameraActionRef so TwinView toolbar buttons can trigger them.
   // The actual implementation lives in CameraActions (inside the Canvas) because
   // it needs access to useThree.
   const fitViewTrigger = useRef(0);
   const topViewTrigger = useRef(0);
+  const focusTrigger = useRef<{ x: number; z: number } | null>(null);
 
   if (cameraActionRef) {
     cameraActionRef.current = {
       fitView: () => { fitViewTrigger.current += 1; },
       topView: () => { topViewTrigger.current += 1; },
+      focusStation: (x: number, z: number) => { focusTrigger.current = { x, z }; },
     };
   }
 
@@ -210,15 +220,17 @@ export default function TwinCanvas({
         {/* ── Cinematic fly-in ─────────────────────────────────────────────── */}
         <CinematicFlyIn end={[cx, camY, camZ]} target={[cx, 0, cz]} />
 
-        {/* ── Camera actions (Fit / Top) ───────────────────────────────────── */}
+        {/* ── Camera actions (Fit / Top / Focus) ──────────────────────────── */}
         <CameraActions
           fitTrigger={fitViewTrigger}
           topTrigger={topViewTrigger}
+          focusTrigger={focusTrigger}
           sceneW={sceneW}
           sceneD={sceneD}
           cx={cx}
           cz={cz}
           orbitRef={orbitRef}
+          onFocusAnimating={setFocusAnimating}
         />
 
         {/* ── OrbitControls ────────────────────────────────────────────────── */}
@@ -249,6 +261,10 @@ export default function TwinCanvas({
           selectedStationId={selectedStationId}
           onStationClick={handleStationClick}
           onStationMove={handleStationMove}
+          onFloorDoubleClick={() => {
+            fitViewTrigger.current += 1;
+            onFloorDoubleClick?.();
+          }}
         />
 
         {/* ── Post-processing — minimal bloom, no dark vignette ────────────── */}
@@ -278,17 +294,20 @@ export default function TwinCanvas({
 interface CameraActionsProps {
   fitTrigger: React.MutableRefObject<number>;
   topTrigger: React.MutableRefObject<number>;
+  focusTrigger: React.MutableRefObject<{ x: number; z: number } | null>;
   sceneW: number;
   sceneD: number;
   cx: number;
   cz: number;
   orbitRef: React.RefObject<OrbitControlsImpl>;
+  onFocusAnimating?: (v: boolean) => void;
 }
 
-function CameraActions({ fitTrigger, topTrigger, sceneW, sceneD, cx, cz, orbitRef }: CameraActionsProps) {
+function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, cx, cz, orbitRef, onFocusAnimating }: CameraActionsProps) {
   const { camera, size } = useThree();
   const lastFit = useRef(0);
   const lastTop = useRef(0);
+  const lastFocus = useRef<{ x: number; z: number } | null>(null);
   const animTarget = useRef<{ pos: THREE.Vector3; orbitTarget: THREE.Vector3 } | null>(null);
   const orbitAnimTarget = useRef<THREE.Vector3>(new THREE.Vector3(cx, 0, cz));
 
@@ -328,19 +347,47 @@ function CameraActions({ fitTrigger, topTrigger, sceneW, sceneD, cx, cz, orbitRe
     };
   }, [size, sceneW, sceneD, cx, cz]);
 
+  /**
+   * Compute a close-up perspective of a station at world position (x, z).
+   * Camera moves to ~8 units above and ~10 units behind/beside the station,
+   * orbit target is the station position at y=1 (equipment midpoint).
+   */
+  const computeFocusPos = useCallback((x: number, z: number): { pos: THREE.Vector3; orbitTarget: THREE.Vector3 } => {
+    const orbitTarget = new THREE.Vector3(x, 1.2, z);
+    // Close-up: position camera at a 35° elevation, 10 units away, slightly angled
+    const closeD = 10;
+    const posY  = closeD * Math.sin(35 * Math.PI / 180);
+    const posZOff = closeD * Math.cos(35 * Math.PI / 180);
+    return {
+      pos: new THREE.Vector3(x, posY, z + posZOff),
+      orbitTarget,
+    };
+  }, []);
+
   useFrame(() => {
     // Check for new triggers
     if (fitTrigger.current !== lastFit.current) {
       lastFit.current = fitTrigger.current;
       const { pos, orbitTarget } = computeFitPos();
       animTarget.current = { pos, orbitTarget };
-      orbitAnimTarget.current = orbitTarget;
+      orbitAnimTarget.current = orbitTarget.clone();
+      onFocusAnimating?.(true);
     }
     if (topTrigger.current !== lastTop.current) {
       lastTop.current = topTrigger.current;
       const { pos, orbitTarget } = computeTopPos();
       animTarget.current = { pos, orbitTarget };
-      orbitAnimTarget.current = orbitTarget;
+      orbitAnimTarget.current = orbitTarget.clone();
+      onFocusAnimating?.(true);
+    }
+    if (focusTrigger.current !== lastFocus.current) {
+      lastFocus.current = focusTrigger.current;
+      if (focusTrigger.current) {
+        const { pos, orbitTarget } = computeFocusPos(focusTrigger.current.x, focusTrigger.current.z);
+        animTarget.current = { pos, orbitTarget };
+        orbitAnimTarget.current = orbitTarget.clone();
+        onFocusAnimating?.(true);
+      }
     }
 
     if (!animTarget.current) return;
@@ -348,12 +395,12 @@ function CameraActions({ fitTrigger, topTrigger, sceneW, sceneD, cx, cz, orbitRe
     camera.position.lerp(animTarget.current.pos, 0.08);
 
     const dist = camera.position.distanceTo(animTarget.current.pos);
-    if (dist < 0.3) {
+    if (dist < 0.25) {
       camera.position.copy(animTarget.current.pos);
       animTarget.current = null;
+      onFocusAnimating?.(false);
     }
 
-    // For top view, tilt camera to look straight down
     if (orbitRef.current) {
       orbitRef.current.target.lerp(orbitAnimTarget.current, 0.08);
       orbitRef.current.update();
@@ -374,6 +421,8 @@ interface SceneContentsProps {
   selectedStationId: string | null;
   onStationClick: (station: StationDTO) => void;
   onStationMove: (id: string, x: number, z: number) => void;
+  /** Called when the user double-clicks the floor — triggers fit view */
+  onFloorDoubleClick?: () => void;
 }
 
 function SceneContents({
@@ -385,6 +434,7 @@ function SceneContents({
   selectedStationId,
   onStationClick,
   onStationMove,
+  onFloorDoubleClick,
 }: SceneContentsProps) {
   // Build a set of station IDs that appear in active separation issues.
   // Separation issues reference step IDs, but flow segments carry the resolved
@@ -424,7 +474,12 @@ function SceneContents({
 
   return (
     <>
-      <FactoryFloor widthM={dto.siteWidth} depthM={dto.siteDepth} zones={dto.zones} />
+      <FactoryFloor
+        widthM={dto.siteWidth}
+        depthM={dto.siteDepth}
+        zones={dto.zones}
+        onDoubleClick={onFloorDoubleClick}
+      />
       <PlantProps zones={dto.zones} />
 
       {dto.zones.map((zone) => (

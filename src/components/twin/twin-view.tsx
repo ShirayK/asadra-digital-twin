@@ -76,7 +76,14 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   simStateRef.current = simState;
 
   // Camera actions ref — wired to TwinCanvas
-  const cameraActionRef = useRef<{ fitView: () => void; topView: () => void } | null>(null);
+  const cameraActionRef = useRef<{
+    fitView: () => void;
+    topView: () => void;
+    focusStation: (x: number, z: number) => void;
+  } | null>(null);
+
+  // True when camera has been focused on a specific station (shows "Back to overview")
+  const [stationFocused, setStationFocused] = useState(false);
 
   // ── Toast helpers ────────────────────────────────────────────────────────────
   const pushToast = useCallback((toast: Omit<Toast, 'id'>) => {
@@ -292,7 +299,12 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
 
   const handleStationClick = useCallback(
     (station: StationDTO) => {
-      if (!tourActive) setSelectedStation((prev) => (prev?.id === station.id ? null : station));
+      if (!tourActive) {
+        setSelectedStation((prev) => (prev?.id === station.id ? null : station));
+        // Animate camera to focus on the clicked station
+        cameraActionRef.current?.focusStation(station.position.x, station.position.z);
+        setStationFocused(true);
+      }
     },
     [tourActive],
   );
@@ -604,8 +616,38 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             tourActive={tourActive}
             onStationClick={handleStationClick}
             onStationMove={handleStationMove}
+            onFloorDoubleClick={() => setStationFocused(false)}
             cameraActionRef={cameraActionRef}
           />
+
+          {/* ── Back-to-overview button — appears while a station is focused ── */}
+          {stationFocused && !tourActive && (
+            <button
+              onClick={() => {
+                cameraActionRef.current?.fitView();
+                setStationFocused(false);
+                setSelectedStation(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                [dir === 'rtl' ? 'left' : 'right']: '12px',
+                padding: '0.35rem 0.85rem',
+                borderRadius: radius.pill,
+                background: 'rgba(255,255,255,0.92)',
+                border: `1px solid ${brand[300]}`,
+                color: brand[700],
+                fontWeight: 600,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(65,34,142,0.15)',
+                backdropFilter: 'blur(8px)',
+                zIndex: 10,
+              }}
+            >
+              {t.twin.backToOverview}
+            </button>
+          )}
 
           {tourActive && liveDto.tourSteps.length > 0 && (
             <GuidedTourCard
