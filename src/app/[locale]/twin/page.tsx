@@ -193,7 +193,7 @@ export default async function TwinPage({ params }: { params: { locale: string } 
         flexDirection: 'column',
         padding: '1rem 1.25rem',
         gap: '1rem',
-        background: 'radial-gradient(1200px 600px at 50% -10%, #13233d 0%, #0a0f1a 60%)',
+        background: 'linear-gradient(180deg, #f4f2fb 0%, #ffffff 60%)',
       }}
     >
 

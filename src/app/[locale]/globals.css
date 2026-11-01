@@ -39,12 +39,12 @@
   --line:     #e6e4ee;
   --page:     #f7f7fa;
 
-  /* App-level aliases */
-  --color-bg:      var(--brand-900);
-  --color-surface: rgba(36, 18, 80, 0.72);
-  --color-border:  rgba(104, 65, 176, 0.55);
-  --color-text:    var(--white);
-  --color-muted:   var(--brand-300);
+  /* App-level aliases — light theme */
+  --color-bg:      var(--brand-50);
+  --color-surface: rgba(244, 242, 251, 0.88);
+  --color-border:  rgba(135, 101, 198, 0.30);
+  --color-text:    #1c1830;
+  --color-muted:   #6c6880;
   --color-accent:  var(--brand-500);
 }
 
@@ -57,7 +57,7 @@ html {
 }
 
 a {
-  color: var(--brand-400);
+  color: var(--brand-700);
   text-decoration: none;
 }
 

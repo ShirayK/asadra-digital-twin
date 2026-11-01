@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
-import { brand, hygiene, stationStatus, glass, radius } from '@/theme/asadra';
+import { brand, hygiene, stationStatus, radius } from '@/theme/asadra';
 
 interface LegendProps {
   locale: Locale;
@@ -36,10 +36,10 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
         position: 'absolute',
         bottom: 12,
         ...(dir === 'rtl' ? { left: 12 } : { right: 12 }),
-        background: glass.dark,
+        background: 'rgba(255,255,255,0.92)',
         backdropFilter: 'blur(14px)',
-        border: `1px solid ${glass.darkBorder}55`,
-        color: brand[100],
+        border: `1px solid ${brand[100]}`,
+        color: brand[700],
         fontSize: 11,
         borderRadius: radius.md,
         padding: collapsed ? '6px 14px' : '10px 14px',
@@ -50,7 +50,7 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
         direction: dir,
         minWidth: 148,
         zIndex: 10,
-        boxShadow: `0 4px 24px rgba(36,18,80,0.6)`,
+        boxShadow: `0 2px 12px rgba(104,65,176,0.12)`,
         transition: 'padding 0.2s',
       }}
     >
@@ -69,7 +69,7 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
             fontSize: 10,
             textTransform: 'uppercase',
             letterSpacing: '0.07em',
-            color: brand[300],
+            color: brand[500],
           }}
         >
           {t.legend.hygieneZone}
@@ -80,7 +80,7 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
           style={{
             background: 'none',
             border: 'none',
-            color: brand[300],
+            color: brand[400],
             cursor: 'pointer',
             fontSize: 10,
             padding: '0 2px',
@@ -125,7 +125,7 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
           ))}
 
           {/* Divider */}
-          <div style={{ height: 1, background: `${brand[500]}44`, margin: '3px 0' }} />
+          <div style={{ height: 1, background: brand[100], margin: '3px 0' }} />
 
           {/* Station status section */}
           <div
@@ -134,7 +134,7 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
               fontSize: 10,
               textTransform: 'uppercase',
               letterSpacing: '0.07em',
-              color: brand[300],
+              color: brand[500],
               marginBottom: 2,
             }}
           >

@@ -58,17 +58,17 @@ export const hygiene = {
   NON_FOOD:  status.noData,     // gray  — non-food
 } as const;
 
-// ── Glass panel surfaces ──────────────────────────────────────────────────────
+// ── Light glass panel surfaces ────────────────────────────────────────────────
 export const glass = {
-  /** Primary panel — dark purple glass */
-  dark:        `rgba(36,18,80,0.88)`,
-  darkBorder:  brand[500],
+  /** Primary panel — white glass with soft purple tint */
+  dark:        `rgba(255,255,255,0.92)`,
+  darkBorder:  brand[300],
   /** Medium panel — sidebars, tooltips */
-  panel:       `rgba(36,18,80,0.72)`,
-  panelBorder: `rgba(104,65,176,0.55)`,
+  panel:       `rgba(244,242,251,0.88)`,
+  panelBorder: `rgba(135,101,198,0.30)`,
   /** Subtle card surface */
-  card:        `rgba(65,34,142,0.28)`,
-  cardBorder:  `rgba(135,101,198,0.35)`,
+  card:        `rgba(230,225,246,0.55)`,
+  cardBorder:  `rgba(135,101,198,0.22)`,
 } as const;
 
 // ── Ink / neutral scale (derived from brand-900 desaturated) ──────────────────

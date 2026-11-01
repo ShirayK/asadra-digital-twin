@@ -100,11 +100,12 @@ export default function TwinCanvas({
   const sceneD = maxZ - minZ;
 
   // Camera distance: must frame the larger span, accounting for fov=40 and
-  // typical landscape aspect (~1.8). Add 15% margin.
+  // typical landscape aspect (~1.8). Target ~80% canvas fill → tighter margin.
   const FOV_RAD = (40 * Math.PI) / 180;
   // Fit the wider axis; for a PerspectiveCamera the visible half-extent at
   // distance d = d * tan(fov/2).  We want half-span ≤ visible extent.
-  const halfSpan = Math.max(sceneW, sceneD) / 2 * 1.15;
+  // 0.90 margin fills ~80% of the canvas at 1920×1080.
+  const halfSpan = Math.max(sceneW, sceneD) / 2 * 0.90;
   const fitDist = halfSpan / Math.tan(FOV_RAD / 2);
   const camY = fitDist * 0.82;
   const camZ = cz + fitDist * 0.68;
@@ -156,51 +157,51 @@ export default function TwinCanvas({
           near: 0.1,
           far: 1000,
         }}
-        style={{ background: '#0b0a14', borderRadius: '12px' }}
+        style={{ background: '#eef0f6', borderRadius: '12px' }}
         gl={{ antialias: true }}
         onPointerDown={() => {
           if (!userInteracted) setUserInteracted(true);
         }}
       >
-        {/* ── Fog ────────────────────────────────────────────────────────── */}
-        <fog attach="fog" args={['#0b0a14', 40, 220]} />
+        {/* ── Fog — light scene: near-white to match canvas bg ────────────── */}
+        <fog attach="fog" args={['#eef0f6', 60, 280]} />
 
-        {/* ── Environment ─────────────────────────────────────────────────── */}
-        <Environment preset="night" />
+        {/* ── Environment — studio for neutral bright illumination ─────────── */}
+        <Environment preset="warehouse" />
 
-        {/* ── Lighting ────────────────────────────────────────────────────── */}
-        {/* Slightly elevated ambient to lift the base darkness */}
-        <ambientLight intensity={0.10} />
-        {/* Hemisphere: warm purple sky, cool deep ground */}
-        <hemisphereLight args={['#2a1560', '#0a0812', 0.38]} />
-        {/* Key light — cool lavender from above */}
+        {/* ── Lighting — bright like a clean food-factory with daylight ──────── */}
+        {/* Strong ambient: fills shadows without darkness */}
+        <ambientLight intensity={0.65} color="#f8f6ff" />
+        {/* Hemisphere: warm white sky, cool light floor */}
+        <hemisphereLight args={['#ffffff', '#dbd5f5', 0.70]} />
+        {/* Key light — daylight white from high angle, casts soft shadows */}
         <directionalLight
-          position={[dto.siteWidth * 0.6, 25, dto.siteDepth * 0.7]}
-          intensity={0.85}
-          color="#cbb8f0"
+          position={[dto.siteWidth * 0.6, 30, dto.siteDepth * 0.7]}
+          intensity={1.4}
+          color="#ffffff"
           castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-camera-near={0.5}
-          shadow-camera-far={140}
+          shadow-camera-far={160}
           shadow-camera-left={-dto.siteWidth}
           shadow-camera-right={dto.siteWidth}
           shadow-camera-top={dto.siteDepth}
           shadow-camera-bottom={-dto.siteDepth}
           shadow-bias={-0.0005}
         />
-        {/* Fill light — deep purple from opposite corner */}
+        {/* Fill light — soft purple-white from opposite side */}
         <directionalLight
-          position={[-dto.siteWidth * 0.4, 12, -dto.siteDepth * 0.4]}
-          intensity={0.18}
-          color="#41228e"
+          position={[-dto.siteWidth * 0.4, 14, -dto.siteDepth * 0.4]}
+          intensity={0.55}
+          color="#e8e0ff"
         />
-        {/* Rim light — subtle purple from behind-right for depth */}
+        {/* Top bounce light — mimics industrial ceiling panels */}
         <pointLight
-          position={[dto.siteWidth * 0.9, 8, dto.siteDepth * 0.1]}
-          intensity={0.45}
-          color="#6841b0"
-          distance={dto.siteWidth * 2}
-          decay={2}
+          position={[dto.siteWidth * 0.5, 18, dto.siteDepth * 0.5]}
+          intensity={0.60}
+          color="#f5f3ff"
+          distance={dto.siteWidth * 3}
+          decay={1.5}
         />
 
         {/* ── Guided tour ──────────────────────────────────────────────────── */}
@@ -250,15 +251,15 @@ export default function TwinCanvas({
           onStationMove={handleStationMove}
         />
 
-        {/* ── Post-processing ──────────────────────────────────────────────── */}
+        {/* ── Post-processing — minimal bloom, no dark vignette ────────────── */}
         <EffectComposer>
           <Bloom
-            luminanceThreshold={0.35}
-            luminanceSmoothing={0.4}
-            intensity={1.1}
+            luminanceThreshold={0.88}
+            luminanceSmoothing={0.3}
+            intensity={0.18}
             mipmapBlur
           />
-          <Vignette eskil={false} offset={0.35} darkness={0.65} />
+          <Vignette eskil={false} offset={0.55} darkness={0.20} />
         </EffectComposer>
       </Canvas>
 
@@ -297,8 +298,8 @@ function CameraActions({ fitTrigger, topTrigger, sceneW, sceneD, cx, cz, orbitRe
     const FOV_RAD = (40 * Math.PI) / 180;
     // Half-angles for both axes
     const hFovRad = Math.atan(Math.tan(FOV_RAD / 2) * aspect);
-    // Distance needed to fit horizontal span (sceneW) and vertical span (sceneD)
-    const MARGIN = 1.18;
+    // Distance needed to fill ~80% of canvas — tighter margin than before
+    const MARGIN = 0.90;
     const dForWidth = (sceneW / 2 * MARGIN) / Math.tan(hFovRad);
     const dForDepth = (sceneD / 2 * MARGIN) / Math.tan(FOV_RAD / 2);
     const dist = Math.max(dForWidth, dForDepth);

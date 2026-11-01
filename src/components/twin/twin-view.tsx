@@ -24,7 +24,7 @@ import type { SimulatorState } from '@/domain/simulator';
 import SidePanel from './side-panel';
 import TwinToolbar from './twin-toolbar';
 import GuidedTourCard, { setTourTarget } from './guided-tour';
-import { brand, stationStatus as statusPalette, glass, radius, status as themeStatus } from '@/theme/asadra';
+import { brand, stationStatus as statusPalette, radius, status as themeStatus } from '@/theme/asadra';
 
 const TwinCanvas = dynamic(() => import('./twin-canvas'), { ssr: false });
 
@@ -417,7 +417,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           />
 
           {/* Separator */}
-          <span style={{ width: '1px', height: '1.5rem', background: `${brand[400]}44` }} />
+          <span style={{ width: '1px', height: '1.5rem', background: `${brand[300]}66` }} />
 
           {/* Guided tour button */}
           {!tourActive ? (
@@ -428,8 +428,8 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 padding: '0.38rem 0.9rem',
                 borderRadius: radius.pill,
                 border: `1px solid ${themeStatus.ok}66`,
-                background: `${themeStatus.ok}18`,
-                color: '#bbf7d0',
+                background: `rgba(255,255,255,0.85)`,
+                color: themeStatus.ok,
                 fontWeight: 500,
                 fontSize: '0.875rem',
                 cursor: liveDto.tourSteps.length === 0 ? 'default' : 'pointer',
@@ -437,6 +437,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 alignItems: 'center',
                 gap: '0.35rem',
                 opacity: liveDto.tourSteps.length === 0 ? 0.4 : 1,
+                boxShadow: '0 1px 4px rgba(104,65,176,0.10)',
               }}
             >
               🎓 {t.tour.start}
@@ -448,8 +449,8 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 padding: '0.38rem 0.9rem',
                 borderRadius: radius.pill,
                 border: `1px solid ${themeStatus.ok}`,
-                background: `${themeStatus.ok}44`,
-                color: '#fff',
+                background: `${themeStatus.ok}18`,
+                color: themeStatus.ok,
                 fontWeight: 500,
                 fontSize: '0.875rem',
                 cursor: 'pointer',
@@ -463,7 +464,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           )}
 
           {/* Separator */}
-          <span style={{ width: '1px', height: '1.5rem', background: `${brand[400]}44` }} />
+          <span style={{ width: '1px', height: '1.5rem', background: `${brand[300]}66` }} />
 
           {/* Language switcher */}
           <div
@@ -478,9 +479,9 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                   padding: '0.2rem 0.55rem',
                   borderRadius: radius.pill,
                   border: '1px solid',
-                  borderColor: l === locale ? brand[400] : `${brand[400]}33`,
-                  background: l === locale ? `${brand[500]}44` : glass.panel,
-                  color: l === locale ? '#fff' : brand[300],
+                  borderColor: l === locale ? brand[500] : `${brand[300]}66`,
+                  background: l === locale ? brand[700] : 'rgba(255,255,255,0.85)',
+                  color: l === locale ? '#fff' : brand[500],
                   fontWeight: l === locale ? 700 : 400,
                   textDecoration: 'none',
                 }}
@@ -496,11 +497,11 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <div
             style={{
               padding: '0.4rem 0.75rem',
-              background: `${brand[500]}1a`,
-              border: `1px solid ${brand[500]}`,
+              background: `${brand[50]}`,
+              border: `1px solid ${brand[300]}`,
               borderRadius: radius.sm,
               fontSize: '0.85rem',
-              color: brand[100],
+              color: brand[700],
               direction: dir,
             }}
           >
@@ -513,11 +514,11 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <div
             style={{
               padding: '0.4rem 0.75rem',
-              background: `rgba(120,20,20,0.35)`,
+              background: `rgba(220,38,38,0.06)`,
               border: `1px solid ${themeStatus.deviation}55`,
               borderRadius: radius.sm,
               fontSize: '0.85rem',
-              color: '#fca5a5',
+              color: '#b91c1c',
               direction: dir,
             }}
           >
@@ -545,15 +546,15 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 style={{
                   padding: '0.3rem 0.8rem',
                   borderRadius: radius.pill,
-                  background: glass.panel,
+                  background: selectedStation?.id === station.id ? brand[50] : 'rgba(255,255,255,0.85)',
                   backdropFilter: 'blur(10px)',
-                  color: '#fff',
+                  color: brand[700],
                   fontWeight: 500,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  border: `1px solid ${selectedStation?.id === station.id ? '#fff' : sc + '88'}`,
-                  boxShadow: station.status === 'OUT_OF_RANGE' ? `0 0 12px ${themeStatus.deviation}66` : 'none',
+                  border: `1px solid ${selectedStation?.id === station.id ? brand[500] : sc + '66'}`,
+                  boxShadow: station.status === 'OUT_OF_RANGE' ? `0 0 8px ${themeStatus.deviation}44` : '0 1px 3px rgba(104,65,176,0.08)',
                   cursor: editMode ? 'default' : 'pointer',
                   transition: 'border-color 0.15s',
                 }}
@@ -563,7 +564,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                   style={{
                     width: 8, height: 8, borderRadius: 999,
                     background: sc,
-                    boxShadow: `0 0 6px ${sc}`,
+                    flexShrink: 0,
                   }}
                 />
                 {displayName}
@@ -579,9 +580,9 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             style={{
               padding: '2rem',
               textAlign: 'center',
-              color: brand[300],
+              color: brand[400],
               fontSize: '1rem',
-              border: `1px dashed ${brand[500]}55`,
+              border: `1px dashed ${brand[300]}`,
               borderRadius: radius.md,
               direction: dir,
             }}
@@ -634,16 +635,16 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             style={{
               padding: '0.25rem 0.75rem',
               borderRadius: radius.pill,
-              background: issueCount > 0 ? `${themeStatus.deviation}22` : `${themeStatus.ok}22`,
+              background: issueCount > 0 ? `rgba(220,38,38,0.06)` : `rgba(22,163,74,0.08)`,
               border: `1px solid ${issueCount > 0 ? themeStatus.deviation : themeStatus.ok}`,
-              color: issueCount > 0 ? '#fecaca' : '#bbf7d0',
+              color: issueCount > 0 ? '#b91c1c' : '#15803d',
               fontWeight: 600,
             }}
           >
             {issueCount > 0 ? `${issueCount} ${t.twin.issues}` : t.twin.noIssues}
           </span>
 
-          <span style={{ color: brand[300] }}>
+          <span style={{ color: brand[400] }}>
             {liveDto.flowSegments.length} {t.twin.flowSegments}
           </span>
 
@@ -651,9 +652,9 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             style={{
               padding: '0.25rem 0.75rem',
               borderRadius: radius.pill,
-              background: liveDto.chainResult.valid ? `${themeStatus.ok}22` : `${themeStatus.expiring}22`,
+              background: liveDto.chainResult.valid ? `rgba(22,163,74,0.08)` : `rgba(217,119,6,0.08)`,
               border: `1px solid ${liveDto.chainResult.valid ? themeStatus.ok : themeStatus.expiring}`,
-              color: liveDto.chainResult.valid ? '#bbf7d0' : '#fde68a',
+              color: liveDto.chainResult.valid ? '#15803d' : '#92400e',
               fontWeight: 600,
             }}
           >
@@ -668,7 +669,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
               margin: 0,
               padding: dir === 'rtl' ? '0 1.25rem 0 0' : '0 0 0 1.25rem',
               fontSize: '0.875rem',
-              color: '#fca5a5',
+              color: '#b91c1c',
               direction: dir,
             }}
           >
@@ -752,7 +753,7 @@ function ToastItem({
   t: ReturnType<typeof getDictionary>;
 }) {
   const isBreachKind = toast.kind === 'breach';
-  const borderColor = isBreachKind ? themeStatus.deviation : brand[500];
+  const borderColor = isBreachKind ? themeStatus.deviation : brand[400];
 
   return (
     <div
@@ -763,13 +764,13 @@ function ToastItem({
         gap: '0.65rem',
         paddingBlock: '0.65rem',
         paddingInline: '1rem',
-        background: glass.dark,
+        background: 'rgba(255,255,255,0.96)',
         backdropFilter: 'blur(12px)',
         border: `1px solid ${borderColor}`,
-        boxShadow: `0 0 20px ${borderColor}44`,
+        boxShadow: `0 4px 20px rgba(104,65,176,0.15)`,
         borderRadius: radius.md,
         fontSize: '0.9rem',
-        color: '#fff',
+        color: '#1c1830',
         fontWeight: 500,
         // No pulse on the container — pulse icon only
       }}
@@ -817,9 +818,9 @@ function ToastItem({
         style={{
           padding: '0.2rem 0.4rem',
           borderRadius: radius.sm,
-          border: `1px solid ${brand[400]}55`,
+          border: `1px solid ${brand[300]}55`,
           background: 'transparent',
-          color: brand[300],
+          color: brand[400],
           cursor: 'pointer',
           fontSize: '0.85rem',
           flexShrink: 0,
@@ -900,8 +901,8 @@ function TwinHeader({
       style={{
         padding: '0.45rem 0.9rem',
         borderRadius: radius.md,
-        background: glass.card,
-        border: `1px solid ${brand[500]}44`,
+        background: brand[50],
+        border: `1px solid ${brand[100]}`,
         minWidth: 120,
       }}
     >
@@ -910,7 +911,7 @@ function TwinHeader({
           fontSize: '0.68rem',
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
-          color: brand[300],
+          color: brand[400],
         }}
       >
         {label}
@@ -920,7 +921,6 @@ function TwinHeader({
           fontSize: '1.15rem',
           fontWeight: 700,
           color,
-          textShadow: `0 0 10px ${color}66`,
         }}
       >
         {value}
@@ -938,10 +938,10 @@ function TwinHeader({
         direction: dir,
         padding: '0.6rem 1rem',
         borderRadius: radius.lg,
-        background: glass.panel,
-        border: `1px solid ${brand[500]}44`,
+        background: 'rgba(255,255,255,0.92)',
+        border: `1px solid ${brand[100]}`,
         backdropFilter: 'blur(14px)',
-        boxShadow: `0 2px 16px rgba(36,18,80,0.5)`,
+        boxShadow: `0 2px 12px rgba(104,65,176,0.10)`,
       }}
     >
       {/* Logo tile */}
@@ -957,7 +957,7 @@ function TwinHeader({
             fontWeight: 900,
             color: '#fff',
             fontSize: 20,
-            boxShadow: `0 0 16px ${brand[500]}66`,
+            boxShadow: `0 2px 8px ${brand[500]}44`,
           }}
         >
           A
@@ -968,14 +968,12 @@ function TwinHeader({
               fontWeight: 900,
               letterSpacing: '0.18em',
               fontSize: '1.05rem',
-              background: `linear-gradient(90deg, ${brand[100]}, ${brand[300]})`,
-              WebkitBackgroundClip: 'text',
-              color: 'transparent',
+              color: brand[700],
             }}
           >
             ASADRA
           </div>
-          <h1 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: brand[300] }}>
+          <h1 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: brand[400] }}>
             {t.twin.title} — {locale === 'en' && dto.siteNameEn ? dto.siteNameEn : dto.siteName}
           </h1>
         </div>
@@ -997,7 +995,7 @@ function TwinHeader({
       {kpi(
         he ? 'שלמות שרשרת' : 'Chain integrity',
         dto.chainResult.valid ? (he ? 'מאומתת ✓' : 'Verified ✓') : (he ? 'שבורה' : 'Broken'),
-        dto.chainResult.valid ? brand[300] : themeStatus.expiring,
+        dto.chainResult.valid ? themeStatus.ok : themeStatus.expiring,
       )}
 
       {/* Clock */}
@@ -1006,7 +1004,7 @@ function TwinHeader({
           style={{
             fontFamily: 'ui-monospace, monospace',
             fontSize: '1.25rem',
-            color: '#fff',
+            color: brand[700],
             fontWeight: 700,
           }}
           suppressHydrationWarning

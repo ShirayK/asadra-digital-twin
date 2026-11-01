@@ -77,9 +77,9 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
         marginBlock: 'auto',
         background: glass.dark,
         backdropFilter: 'blur(18px)',
-        color: '#fff',
-        borderInline: `1px solid ${glass.darkBorder}55`,
-        boxShadow: `0 0 48px rgba(36,18,80,0.7)`,
+        color: '#1c1830',
+        borderInline: `1px solid ${brand[300]}44`,
+        boxShadow: `0 4px 32px rgba(104,65,176,0.18), 0 0 0 1px ${brand[100]}`,
         overflowY: 'auto',
         zIndex: 50,
         direction: dir,
@@ -97,9 +97,9 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
           justifyContent: 'space-between',
           alignItems: 'flex-start',
           padding: '1rem',
-          borderBottom: `1px solid ${brand[500]}44`,
+          borderBottom: `1px solid ${brand[100]}`,
           gap: '0.5rem',
-          background: `${brand[700]}55`,
+          background: brand[50],
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -108,7 +108,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
               margin: 0,
               fontSize: '1rem',
               fontWeight: 700,
-              color: '#fff',
+              color: brand[700],
               wordBreak: 'break-word',
               overflowWrap: 'anywhere',
             }}
@@ -154,12 +154,12 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
           onClick={onClose}
           aria-label={t.common.close}
           style={{
-            background: `${brand[500]}33`,
-            border: `1px solid ${brand[400]}55`,
+            background: `${brand[100]}`,
+            border: `1px solid ${brand[300]}55`,
             borderRadius: radius.sm,
             cursor: 'pointer',
             fontSize: '1.25rem',
-            color: brand[300],
+            color: brand[500],
             lineHeight: 1,
             padding: '0.25rem 0.45rem',
             flexShrink: 0,
@@ -171,7 +171,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
       </div>
 
       {/* ── Body ────────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: '#fff' }}>
 
         {/* Fields with limits */}
         {station.fields.length > 0 && (
@@ -182,18 +182,18 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
                 <div
                   key={field.key}
                   style={{
-                    background: glass.card,
-                    border: `1px solid ${glass.cardBorder}`,
+                    background: brand[50],
+                    border: `1px solid ${brand[100]}`,
                     borderRadius: radius.sm,
                     padding: '0.5rem 0.75rem',
                     fontSize: '0.8125rem',
                   }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: '0.125rem', color: brand[100] }}>
+                  <div style={{ fontWeight: 600, marginBottom: '0.125rem', color: brand[700] }}>
                     {fieldLabel(locale, field.key, field.label)}
                     {field.unit ? ` (${field.unit})` : ''}
                   </div>
-                  <div style={{ color: brand[300], fontSize: '0.75rem' }}>
+                  <div style={{ color: brand[500], fontSize: '0.75rem' }}>
                     {field.min !== undefined && (
                       <span>
                         {t.panel.min}: {field.min}
@@ -217,7 +217,7 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
         <section>
           <SectionTitle>{t.panel.lastReadings}</SectionTitle>
           {station.lastReadings.length === 0 ? (
-            <p style={{ margin: 0, color: brand[300], fontSize: '0.8125rem' }}>
+            <p style={{ margin: 0, color: brand[400], fontSize: '0.8125rem' }}>
               {t.panel.noReadings}
             </p>
           ) : (
@@ -242,12 +242,12 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
             <p
               style={{
                 margin: 0,
-                background: `rgba(120,20,20,0.35)`,
-                border: `1px solid ${status.deviation}55`,
+                background: `rgba(220,38,38,0.06)`,
+                border: `1px solid ${status.deviation}44`,
                 borderRadius: radius.sm,
                 padding: '0.625rem 0.75rem',
                 fontSize: '0.8125rem',
-                color: '#fecaca',
+                color: '#b91c1c',
                 wordBreak: 'break-word',
                 overflowWrap: 'anywhere',
               }}
@@ -264,13 +264,13 @@ export default function SidePanel({ station, locale, dir = 'ltr', onClose }: Sid
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8125rem' }}>
               <code
                 style={{
-                  background: glass.card,
+                  background: brand[50],
                   borderRadius: radius.sm,
                   padding: '0.25rem 0.5rem',
                   fontFamily: 'monospace',
                   fontSize: '0.75rem',
                   wordBreak: 'break-all',
-                  color: brand[300],
+                  color: brand[500],
                 }}
               >
                 {latestReading.hash.slice(0, 16)}…
@@ -311,7 +311,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
         fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
-        color: brand[300],
+        color: brand[500],
       }}
     >
       {children}
@@ -334,14 +334,14 @@ function ReadingCard({
   return (
     <div
       style={{
-        background: glass.card,
-        border: `1px solid ${glass.cardBorder}`,
+        background: brand[50],
+        border: `1px solid ${brand[100]}`,
         borderRadius: radius.sm,
         padding: '0.5rem 0.75rem',
         fontSize: '0.8125rem',
       }}
     >
-      <div style={{ color: brand[300], marginBottom: '0.25rem', fontSize: '0.75rem' }}>
+      <div style={{ color: brand[400], marginBottom: '0.25rem', fontSize: '0.75rem' }}>
         {t.panel.recordedAt}: {new Date(reading.recordedAt).toLocaleString()}
       </div>
 
@@ -361,14 +361,14 @@ function ReadingCard({
               padding: '1px 0',
             }}
           >
-            <span style={{ color: brand[300] }}>
+            <span style={{ color: brand[400] }}>
               {fieldLabel(locale, key, field?.label)}
               {field?.unit ? ` (${field.unit})` : ''}
             </span>
             <span
               style={{
                 fontWeight: 600,
-                color: outOfRange ? '#fca5a5' : '#fff',
+                color: outOfRange ? '#b91c1c' : brand[700],
                 background: outOfRange ? 'rgba(220,38,38,0.2)' : 'transparent',
                 padding: outOfRange ? '0 4px' : undefined,
                 borderRadius: outOfRange ? '3px' : undefined,
@@ -381,7 +381,7 @@ function ReadingCard({
       })}
 
       {reading.correctiveAction && (
-        <div style={{ marginTop: '0.25rem', color: '#fecaca', fontSize: '0.75rem', fontStyle: 'italic' }}>
+        <div style={{ marginTop: '0.25rem', color: '#b91c1c', fontSize: '0.75rem', fontStyle: 'italic' }}>
           {reading.correctiveAction}
         </div>
       )}

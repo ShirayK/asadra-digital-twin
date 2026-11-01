@@ -339,26 +339,26 @@ export default function StationMarker({
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           {showFullLabel ? (
-            /* Full label */
+            /* Full label — 13px, light glass, max 180px, wraps to 2 lines for Hebrew */
             <div
               title={displayName}
               style={{
-                background: `rgba(36,18,80,0.88)`,
-                color: '#fff',
-                fontSize: '11px',
+                background: `rgba(255,255,255,0.92)`,
+                color: '#1c1830',
+                fontSize: '13px',
                 fontWeight: 600,
-                padding: '3px 8px',
+                padding: '2px 7px',
                 borderRadius: '6px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '160px',
+                maxWidth: '180px',
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
                 border: `1px solid ${color}55`,
-                backdropFilter: 'blur(4px)',
-                boxShadow: `0 2px 8px rgba(36,18,80,0.5)`,
+                backdropFilter: 'blur(6px)',
+                boxShadow: `0 1px 6px rgba(104,65,176,0.18)`,
+                lineHeight: 1.3,
               }}
             >
               <span
@@ -371,13 +371,7 @@ export default function StationMarker({
                   flexShrink: 0,
                 }}
               />
-              <span
-                style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
+              <span style={{ flex: 1, minWidth: 0 }}>
                 {displayName}
               </span>
             </div>
@@ -386,12 +380,12 @@ export default function StationMarker({
             <div
               title={displayName}
               style={{
-                width: '10px',
-                height: '10px',
+                width: '9px',
+                height: '9px',
                 borderRadius: '50%',
                 background: color,
-                border: `2px solid rgba(255,255,255,0.6)`,
-                boxShadow: `0 0 6px ${color}88`,
+                border: `2px solid rgba(255,255,255,0.8)`,
+                boxShadow: `0 0 4px ${color}66`,
                 cursor: 'default',
               }}
             />

@@ -2,7 +2,7 @@
 
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
-import { brand, status, glass, radius } from '@/theme/asadra';
+import { brand, status, radius } from '@/theme/asadra';
 
 interface TwinToolbarProps {
   locale: Locale;
@@ -185,7 +185,7 @@ function Divider() {
       style={{
         width: '1px',
         height: '1.5rem',
-        background: `${brand[400]}44`,
+        background: `${brand[300]}66`,
         margin: '0 0.15rem',
         flexShrink: 0,
       }}
@@ -196,10 +196,10 @@ function Divider() {
 const GLASS_BASE: React.CSSProperties = {
   padding: '0.38rem 0.9rem',
   borderRadius: radius.pill,
-  border: `1px solid ${brand[400]}44`,
-  background: glass.panel,
+  border: `1px solid ${brand[300]}55`,
+  background: 'rgba(255,255,255,0.85)',
   backdropFilter: 'blur(10px)',
-  color: brand[100],
+  color: brand[700],
   fontWeight: 600,
   fontSize: '0.85rem',
   cursor: 'pointer',
@@ -207,6 +207,7 @@ const GLASS_BASE: React.CSSProperties = {
   alignItems: 'center',
   gap: '0.4rem',
   letterSpacing: '0.01em',
+  boxShadow: '0 1px 4px rgba(104,65,176,0.10)',
   transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
 };
 
@@ -215,9 +216,9 @@ function toggleStyle(active: boolean, activeColor: string): React.CSSProperties 
     ? {
         ...GLASS_BASE,
         border: `1px solid ${activeColor}`,
-        background: `${activeColor}26`,
-        color: '#fff',
-        boxShadow: `0 0 12px ${activeColor}55, inset 0 0 6px ${activeColor}22`,
+        background: `${activeColor}18`,
+        color: activeColor,
+        boxShadow: `0 0 8px ${activeColor}33`,
       }
     : GLASS_BASE;
 }
@@ -225,7 +226,7 @@ function toggleStyle(active: boolean, activeColor: string): React.CSSProperties 
 function actionStyle(color: string): React.CSSProperties {
   return {
     ...GLASS_BASE,
-    border: `1px solid ${color}66`,
-    color: brand[100],
+    border: `1px solid ${color}55`,
+    color: brand[700],
   };
 }
