@@ -87,7 +87,7 @@ function Ladder({ height, x, s = 1 }: { height: number; x: number; s?: number })
  */
 export function WorkerFigure({
   position,
-  color = '#f0f4f8',
+  color = '#d9d4ea',
   phase = 0,
 }: {
   position: [number, number, number];
@@ -112,12 +112,12 @@ export function WorkerFigure({
       {/* Left leg */}
       <mesh castShadow position={[-0.055, 0.16, 0]}>
         <boxGeometry args={[0.08, 0.32, 0.08]} />
-        <meshStandardMaterial color="#dbeafe" roughness={0.8} />
+        <meshStandardMaterial color="#4b4566" roughness={0.8} />
       </mesh>
       {/* Right leg */}
       <mesh castShadow position={[0.055, 0.16, 0]}>
         <boxGeometry args={[0.08, 0.32, 0.08]} />
-        <meshStandardMaterial color="#dbeafe" roughness={0.8} />
+        <meshStandardMaterial color="#4b4566" roughness={0.8} />
       </mesh>
       {/* Shoes */}
       {([-0.055, 0.055] as number[]).map((lx, i) => (

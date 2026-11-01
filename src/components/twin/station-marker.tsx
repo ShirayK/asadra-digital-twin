@@ -352,7 +352,7 @@ export default function StationMarker({
                   fontWeight: 600,
                   padding: '2px 7px',
                   borderRadius: '6px',
-                  maxWidth: '140px',
+                  maxWidth: '220px',
                   width: 'max-content',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',

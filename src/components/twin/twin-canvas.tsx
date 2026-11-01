@@ -353,11 +353,11 @@ function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, c
    * orbit target is the station position at y=1 (equipment midpoint).
    */
   const computeFocusPos = useCallback((x: number, z: number): { pos: THREE.Vector3; orbitTarget: THREE.Vector3 } => {
-    const orbitTarget = new THREE.Vector3(x, 1.2, z);
+    const orbitTarget = new THREE.Vector3(x, 2.0, z);
     // Close-up: position camera at a 35° elevation, 10 units away, slightly angled
-    const closeD = 10;
-    const posY  = closeD * Math.sin(35 * Math.PI / 180);
-    const posZOff = closeD * Math.cos(35 * Math.PI / 180);
+    const closeD = 15;
+    const posY  = 2.0 + closeD * Math.sin(38 * Math.PI / 180);
+    const posZOff = closeD * Math.cos(38 * Math.PI / 180);
     return {
       pos: new THREE.Vector3(x, posY, z + posZOff),
       orbitTarget,
@@ -397,6 +397,10 @@ function CameraActions({ fitTrigger, topTrigger, focusTrigger, sceneW, sceneD, c
     const dist = camera.position.distanceTo(animTarget.current.pos);
     if (dist < 0.25) {
       camera.position.copy(animTarget.current.pos);
+      // Snap the orbit target too, otherwise it stops part-way when the
+      // demand frameloop goes idle and the focused station ends up off-centre.
+      orbitRef.current?.target.copy(orbitAnimTarget.current);
+      orbitRef.current?.update();
       animTarget.current = null;
       onFocusAnimating?.(false);
     }
