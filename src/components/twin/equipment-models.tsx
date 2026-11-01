@@ -16,7 +16,7 @@ function Gauge({ position, scale = 1, rotationY = 0 }: { position: [number, numb
       </mesh>
       <mesh position={[0, 0, 0.022 * scale]}>
         <circleGeometry args={[0.075 * scale, 18]} />
-        <meshStandardMaterial color="#e0f2fe" emissive="#7dd3fc" emissiveIntensity={0.5} />
+        <meshStandardMaterial color="#ede9fe" emissive="#a78bfa" emissiveIntensity={0.5} />
       </mesh>
       <mesh position={[0.02 * scale, 0.02 * scale, 0.026 * scale]} rotation={[0, 0, -0.8]}>
         <boxGeometry args={[0.008 * scale, 0.06 * scale, 0.004 * scale]} />
@@ -259,7 +259,7 @@ export function ChillerModel({ scale = 1 }: { scale?: number }) {
       {/* Status strip above door */}
       <mesh position={[0, h * 0.95, d / 2 + 0.012 * scale]}>
         <boxGeometry args={[w * 0.6, 0.04 * scale, 0.01 * scale]} />
-        <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={1.2} />
+        <meshStandardMaterial color="#c4b5fd" emissive="#8b5cf6" emissiveIntensity={1.2} />
       </mesh>
 
       {/* Compressor box on top-back */}

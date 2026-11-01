@@ -82,7 +82,7 @@ function Pipe({ from, to, y = 2.4, color = '#cbd5e1' }: { from: [number, number]
       {/* thick outer pipe */}
       <mesh position={[(from[0] + to[0]) / 2, y, (from[1] + to[1]) / 2]} rotation={[Math.PI / 2, 0, -ang]} castShadow>
         <cylinderGeometry args={[0.26, 0.26, len, 18]} />
-        <meshStandardMaterial color={color} metalness={0.9} roughness={0.2} emissive="#0ea5e9" emissiveIntensity={0.18} />
+        <meshStandardMaterial color={color} metalness={0.9} roughness={0.2} emissive="#7c3aed" emissiveIntensity={0.18} />
       </mesh>
       {/* flanges */}
       {[0.15, 0.5, 0.85].map((t) => (
@@ -96,7 +96,7 @@ function Pipe({ from, to, y = 2.4, color = '#cbd5e1' }: { from: [number, number]
         {[0, 1, 2, 3].map((i) => (
           <mesh key={i}>
             <sphereGeometry args={[0.3, 12, 10]} />
-            <meshStandardMaterial color="#67e8f9" emissive="#22d3ee" emissiveIntensity={2.2} transparent opacity={0.55} toneMapped={false} />
+            <meshStandardMaterial color="#c4b5fd" emissive="#8b5cf6" emissiveIntensity={2.2} transparent opacity={0.55} toneMapped={false} />
           </mesh>
         ))}
       </group>

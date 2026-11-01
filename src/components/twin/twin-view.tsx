@@ -711,7 +711,7 @@ function ToastStack({ toasts, dir, panelOpen, locale, onDismiss, onCorrectiveAct
     <div
       style={{
         position: 'fixed',
-        top: '72px',
+        top: '200px',
         // Centered by default; when panel is open we push toward the free side
         insetInlineEnd,
         left: panelOpen ? 'auto' : '50%',
