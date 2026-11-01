@@ -34,7 +34,11 @@
     "flowSegments": "מקטעי זרימה",
     "editModeBanner": "מצב עריכה: גרור תחנות על הרצפה לשינוי מיקומן. השינויים נשמרים אוטומטית.",
     "importError": "שגיאת ייבוא",
-    "emptyState": "לא נטענו נתונים. ייבא קובץ JSON או הוסף קובץ seed."
+    "emptyState": "לא נטענו נתונים. ייבא קובץ JSON או הוסף קובץ seed.",
+    "fitView": "התאם תצוגה",
+    "topView": "מבט מלמעלה",
+    "correctiveAction": "בצע פעולה מתקנת",
+    "dismiss": "סגור"
   },
   "status": {
     "OK": "תקין",

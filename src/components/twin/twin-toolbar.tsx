@@ -2,6 +2,7 @@
 
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
+import { brand, status, glass, radius } from '@/theme/asadra';
 
 interface TwinToolbarProps {
   locale: Locale;
@@ -18,11 +19,12 @@ interface TwinToolbarProps {
   onReset: () => void;
   onExport: () => void;
   onImport: () => void;
+  onFitView?: () => void;
+  onTopView?: () => void;
 }
 
 /**
- * Toolbar with toggles for flow, separation check, and edit mode.
- * Edit mode also exposes Reset, Export, and Import buttons.
+ * Toolbar with toggles for flow, separation check, edit mode, camera controls.
  */
 export default function TwinToolbar({
   locale,
@@ -39,6 +41,8 @@ export default function TwinToolbar({
   onReset,
   onExport,
   onImport,
+  onFitView,
+  onTopView,
 }: TwinToolbarProps) {
   const t = getDictionary(locale);
 
@@ -49,7 +53,7 @@ export default function TwinToolbar({
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '0.5rem',
+        gap: '0.4rem',
         alignItems: 'center',
         direction: dir,
       }}
@@ -58,7 +62,7 @@ export default function TwinToolbar({
       <button
         onClick={onToggleFlow}
         aria-pressed={showFlow}
-        style={toggleStyle(showFlow, '#3b82d4')}
+        style={toggleStyle(showFlow, brand[500])}
       >
         <span style={{ fontSize: '1rem' }}>→</span>
         {t.twin.toggleFlow}
@@ -68,7 +72,7 @@ export default function TwinToolbar({
       <button
         onClick={onToggleSeparation}
         aria-pressed={showSeparation}
-        style={toggleStyle(showSeparation, '#ef4444', '#fef2f2', '#b91c1c')}
+        style={toggleStyle(showSeparation, status.deviation)}
       >
         {t.twin.toggleSeparation}
         {issueCount > 0 && (
@@ -81,8 +85,8 @@ export default function TwinToolbar({
               minWidth: '1.25rem',
               height: '1.25rem',
               padding: '0 0.3rem',
-              borderRadius: '9999px',
-              background: '#ef4444',
+              borderRadius: radius.pill,
+              background: status.deviation,
               color: '#fff',
               fontSize: '0.75rem',
               fontWeight: 700,
@@ -98,20 +102,20 @@ export default function TwinToolbar({
       <button
         onClick={onToggleLive}
         aria-pressed={liveMode}
-        style={toggleStyle(liveMode, '#22c55e', '#f0fdf4', '#166534')}
+        style={toggleStyle(liveMode, status.ok)}
       >
         <span style={{ fontSize: '0.8rem' }}>{liveMode ? '⏸' : '▶'}</span>
         {locale === 'he' ? (liveMode ? 'חי' : 'מושהה') : liveMode ? 'Live' : 'Paused'}
       </button>
 
       {/* Separator */}
-      <span style={{ width: '1px', height: '1.5rem', background: 'rgba(148,163,184,0.3)', margin: '0 0.25rem' }} />
+      <Divider />
 
       {/* Edit mode toggle */}
       <button
         onClick={onToggleEdit}
         aria-pressed={editMode}
-        style={toggleStyle(editMode, '#7c5cd8')}
+        style={toggleStyle(editMode, brand[400])}
       >
         ✏ {t.twin.editMode}
       </button>
@@ -119,13 +123,13 @@ export default function TwinToolbar({
       {/* Edit mode action buttons */}
       {editMode && (
         <>
-          <button onClick={onReset} style={actionStyle('#f59e0b')}>
+          <button onClick={onReset} style={actionStyle(status.expiring)}>
             ↺ {t.common.reset}
           </button>
-          <button onClick={onExport} style={actionStyle('#22c55e')}>
+          <button onClick={onExport} style={actionStyle(status.ok)}>
             ↓ {t.common.export}
           </button>
-          <label style={{ ...actionStyle('#3b82d4'), cursor: 'pointer' }}>
+          <label style={{ ...actionStyle(brand[500]), cursor: 'pointer' }}>
             ↑ {t.common.import}
             <input
               type="file"
@@ -137,31 +141,65 @@ export default function TwinToolbar({
                   const reader = new FileReader();
                   reader.onload = (ev) => {
                     onImport();
-                    // The actual content is handled by twin-view via onImport receiving the text
-                    // We dispatch a custom event to pass the file content
                     const event = new CustomEvent('twin-import', { detail: ev.target?.result });
                     window.dispatchEvent(event);
                   };
                   reader.readAsText(file);
                 }
-                // Reset input so same file can be reimported
                 e.target.value = '';
               }}
             />
           </label>
         </>
       )}
+
+      {/* Separator */}
+      <Divider />
+
+      {/* Camera buttons */}
+      {onFitView && (
+        <button
+          onClick={onFitView}
+          title={`${t.twin.fitView} (F)`}
+          style={actionStyle(brand[400])}
+        >
+          ⊡ {t.twin.fitView}
+        </button>
+      )}
+      {onTopView && (
+        <button
+          onClick={onTopView}
+          title={t.twin.topView}
+          style={actionStyle(brand[300])}
+        >
+          ↓ {t.twin.topView}
+        </button>
+      )}
     </div>
   );
 }
 
+function Divider() {
+  return (
+    <span
+      style={{
+        width: '1px',
+        height: '1.5rem',
+        background: `${brand[400]}44`,
+        margin: '0 0.15rem',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
 const GLASS_BASE: React.CSSProperties = {
-  padding: '0.4rem 0.95rem',
-  borderRadius: '999px',
-  border: '1px solid rgba(148,163,184,0.25)',
-  background: 'rgba(15,23,42,0.55)',
+  padding: '0.38rem 0.9rem',
+  borderRadius: radius.pill,
+  border: `1px solid ${brand[400]}44`,
+  background: glass.panel,
   backdropFilter: 'blur(10px)',
-  color: '#cbd5e1',
+  color: brand[100],
   fontWeight: 600,
   fontSize: '0.85rem',
   cursor: 'pointer',
@@ -169,20 +207,25 @@ const GLASS_BASE: React.CSSProperties = {
   alignItems: 'center',
   gap: '0.4rem',
   letterSpacing: '0.01em',
+  transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
 };
 
-function toggleStyle(active: boolean, activeColor: string, _bg?: string, _text?: string): React.CSSProperties {
+function toggleStyle(active: boolean, activeColor: string): React.CSSProperties {
   return active
     ? {
         ...GLASS_BASE,
         border: `1px solid ${activeColor}`,
         background: `${activeColor}26`,
-        color: '#f8fafc',
-        boxShadow: `0 0 14px ${activeColor}66, inset 0 0 8px ${activeColor}33`,
+        color: '#fff',
+        boxShadow: `0 0 12px ${activeColor}55, inset 0 0 6px ${activeColor}22`,
       }
     : GLASS_BASE;
 }
 
 function actionStyle(color: string): React.CSSProperties {
-  return { ...GLASS_BASE, border: `1px solid ${color}`, color: '#e2e8f0' };
+  return {
+    ...GLASS_BASE,
+    border: `1px solid ${color}66`,
+    color: brand[100],
+  };
 }

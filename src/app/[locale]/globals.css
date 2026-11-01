@@ -1,4 +1,7 @@
-/* Minimal global styles */
+/* Asadra Digital Twin — global styles */
+
+/* Load Rubik + Heebo from Google Fonts (Latin + Hebrew subsets) */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;900&family=Heebo:wght@400;500;600;700;900&display=swap');
 
 *,
 *::before,
@@ -9,13 +12,40 @@
 }
 
 :root {
-  --font-sans: -apple-system, 'Segoe UI', system-ui, sans-serif;
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-border: #334155;
-  --color-text: #f1f5f9;
-  --color-muted: #94a3b8;
-  --color-accent: #3b82f6;
+  --font-sans: 'Rubik', 'Heebo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Brand purple scale */
+  --brand-50:  #f4f2fb;
+  --brand-100: #e6e1f6;
+  --brand-300: #aa93da;
+  --brand-400: #8765c6;
+  --brand-500: #6841b0;
+  --brand-700: #41228e;
+  --brand-900: #241250;
+
+  /* Pure white */
+  --white: #ffffff;
+
+  /* CCP status — reserved for sensor readings only */
+  --status-ok:        #16a34a;
+  --status-deviation: #dc2626;
+  --status-hold:      #ea580c;
+  --status-expiring:  #d97706;
+  --status-no-data:   #6b7280;
+
+  /* Ink / neutrals */
+  --ink:      #1c1830;
+  --ink-muted: #6c6880;
+  --line:     #e6e4ee;
+  --page:     #f7f7fa;
+
+  /* App-level aliases */
+  --color-bg:      var(--brand-900);
+  --color-surface: rgba(36, 18, 80, 0.72);
+  --color-border:  rgba(104, 65, 176, 0.55);
+  --color-text:    var(--white);
+  --color-muted:   var(--brand-300);
+  --color-accent:  var(--brand-500);
 }
 
 html {
@@ -27,10 +57,16 @@ html {
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--brand-400);
   text-decoration: none;
 }
 
 a:hover {
   text-decoration: underline;
+}
+
+/* CCP breach pulse — icon only, never the whole container */
+@keyframes pulse-icon {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.25); }
 }

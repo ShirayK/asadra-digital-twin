@@ -34,7 +34,11 @@
     "flowSegments": "flow segments",
     "editModeBanner": "Edit mode: drag station markers on the floor to reposition them. Changes are saved automatically.",
     "importError": "Import error",
-    "emptyState": "No data loaded. Import a JSON file or add a seed file."
+    "emptyState": "No data loaded. Import a JSON file or add a seed file.",
+    "fitView": "Fit view",
+    "topView": "Top view",
+    "correctiveAction": "Apply corrective action",
+    "dismiss": "Dismiss"
   },
   "status": {
     "OK": "OK",

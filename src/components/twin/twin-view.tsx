@@ -24,8 +24,8 @@ import type { SimulatorState } from '@/domain/simulator';
 import SidePanel from './side-panel';
 import TwinToolbar from './twin-toolbar';
 import GuidedTourCard, { setTourTarget } from './guided-tour';
+import { brand, stationStatus as statusPalette, glass, radius, status as themeStatus } from '@/theme/asadra';
 
-// Load the 3-D canvas only on the client (no SSR) — Prompt 5 implementation
 const TwinCanvas = dynamic(() => import('./twin-canvas'), { ssr: false });
 
 interface TwinViewProps {
@@ -33,10 +33,21 @@ interface TwinViewProps {
   locale: Locale;
 }
 
+/** Max toasts shown simultaneously */
+const MAX_TOASTS = 3;
+
+interface Toast {
+  id: number;
+  message: string;
+  kind: 'breach' | 'info' | 'error';
+  onAction?: () => void;
+  actionLabel?: string;
+}
+
 /**
- * Client component that receives the precomputed DTO from the server and
- * orchestrates the twin UI: status summary, toolbar, 3-D canvas, and issues list.
- * Prompt 8: edit mode — drag stations, Reset, Export, Import with local-overlay.
+ * Client component: orchestrates twin UI.
+ * ToastStack replaces the old inline breach banner.
+ * Brand purple glass theme throughout.
  */
 export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   const t = getDictionary(locale);
@@ -47,25 +58,39 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   const [showSeparation, setShowSeparation] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastId = useRef(0);
 
-  // Guided tour state (Prompt 9)
+  // Guided tour
   const [tourActive, setTourActive] = useState(false);
   const [tourIndex, setTourIndex] = useState(0);
 
-  // Live DTO that may be updated by overlay or import
+  // Live DTO
   const [liveDto, setLiveDto] = useState<TwinDTO>(baseDto);
 
-  // ── Simulator state (Session 14) ─────────────────────────────────────────
-  const [liveMode, setLiveMode] = useState(true); // start live so visitors see the simulation immediately
+  // Simulator
+  const [liveMode, setLiveMode] = useState(true);
   const [simState, setSimState] = useState<SimulatorState | null>(null);
-  const [breachToast, setBreachToast] = useState<string | null>(null);
-  // Ref to track whether breach toast has been shown for the current drift cycle
   const breachShownRef = useRef(false);
-  // Stable ref to latest simState for use in interval callback
   const simStateRef = useRef<SimulatorState | null>(null);
   simStateRef.current = simState;
 
-  // Keep camera lerp target in sync with the active tour step
+  // Camera actions ref — wired to TwinCanvas
+  const cameraActionRef = useRef<{ fitView: () => void; topView: () => void } | null>(null);
+
+  // ── Toast helpers ────────────────────────────────────────────────────────────
+  const pushToast = useCallback((toast: Omit<Toast, 'id'>) => {
+    setToasts((prev) => {
+      const next = [...prev, { ...toast, id: ++toastId.current }];
+      return next.slice(-MAX_TOASTS);
+    });
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  // ── Tour sync ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (tourActive && liveDto.tourSteps.length > 0) {
       setTourTarget(liveDto.tourSteps[tourIndex]?.position ?? null);
@@ -74,7 +99,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     }
   }, [tourActive, tourIndex, liveDto.tourSteps]);
 
-  // Load saved overlay on mount and apply it
+  // ── Load saved overlay on mount ──────────────────────────────────────────────
   useEffect(() => {
     const overlay = loadOverlay();
     if (Object.keys(overlay.stationPositions).length > 0) {
@@ -82,7 +107,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     }
   }, [baseDto]);
 
-  // Listen for import events dispatched by the toolbar's file input
+  // ── Import handler ───────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: Event) => {
       const text = (e as CustomEvent<string>).detail;
@@ -96,7 +121,6 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
         }
         const dataset = result.data;
         const now = new Date();
-        // Recompute all derived data from imported dataset
         const readingsByStation = new Map<string, typeof dataset.readings>();
         for (const reading of dataset.readings) {
           const list = readingsByStation.get(reading.stationId) ?? [];
@@ -122,7 +146,6 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             lastReadings: readings.slice(0, 5),
           };
         });
-        // Rebuild tour steps from the imported dataset
         const importedStationMap = new Map(dataset.stations.map((s) => [s.id, s]));
         const importedTourSteps = dataset.process.steps
           .slice()
@@ -150,10 +173,9 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           stations,
           flowSegments: buildFlowPaths(dataset),
           separationIssues: findSeparationIssues(dataset),
-          chainResult: liveDto.chainResult, // keep existing chain result (async, not recomputed client-side)
+          chainResult: liveDto.chainResult,
           tourSteps: importedTourSteps,
         };
-        // Clear overlay since imported dataset has explicit positions
         clearOverlay();
         setLiveDto(newDto);
       } catch {
@@ -164,19 +186,14 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     return () => window.removeEventListener('twin-import', handler);
   }, [liveDto.chainResult]);
 
-  // ── Simulator tick effect (Session 14) ───────────────────────────────────
+  // ── Simulator tick ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!liveMode) return;
 
-    // On first activation, initialise from baseDto dataset
     if (!simStateRef.current) {
       const stations = baseDto.stations.map((s) => ({
-        id: s.id,
-        name: s.name,
-        controlType: s.controlType,
-        position: s.position,
-        zoneId: s.zoneId,
-        fields: s.fields,
+        id: s.id, name: s.name, controlType: s.controlType,
+        position: s.position, zoneId: s.zoneId, fields: s.fields,
       }));
       const allReadings = baseDto.stations.flatMap((s) => s.lastReadings);
       const initial = initSimulatorState({ stations, seedReadings: allReadings });
@@ -189,47 +206,37 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
       if (!prev) return;
 
       const stations = baseDto.stations.map((s) => ({
-        id: s.id,
-        name: s.name,
-        controlType: s.controlType,
-        position: s.position,
-        zoneId: s.zoneId,
-        fields: s.fields,
+        id: s.id, name: s.name, controlType: s.controlType,
+        position: s.position, zoneId: s.zoneId, fields: s.fields,
       }));
       const next = tickSimulator(prev, { stations, seedReadings: [] });
       setSimState(next);
 
-      // Show breach toast once per drift-up cycle
       if (next.coolingBreaching && !breachShownRef.current) {
         breachShownRef.current = true;
         const temp = next.coolingTemp.toFixed(1);
         const coolingStation = baseDto.stations.find((s) => s.id === COOLING_STATION_ID);
         const limitLabel = coolingStation?.fields.find((f) => f.key === 'temp')?.max ?? COOLING_LIMIT;
-        setBreachToast(
-          locale === 'he'
+        pushToast({
+          kind: 'breach',
+          message: locale === 'he'
             ? `חריגת CCP: קירור ${temp}°C > ${limitLabel}°C`
             : `CCP breach: Cooling ${temp}°C > ${limitLabel}°C`,
-        );
+        });
       }
       if (!next.coolingBreaching) {
         breachShownRef.current = false;
       }
 
-      // Rebuild liveDto with simulated readings
       const now = new Date();
       const updatedStations: StationDTO[] = baseDto.stations.map((s) => {
         const simReadings = (next.readings.get(s.id) ?? []).slice(0, 5);
         const station = {
-          id: s.id,
-          name: s.name,
-          controlType: s.controlType,
-          position: s.position,
-          zoneId: s.zoneId,
-          fields: s.fields,
+          id: s.id, name: s.name, controlType: s.controlType,
+          position: s.position, zoneId: s.zoneId, fields: s.fields,
         };
         return {
           ...s,
-          // Simulated sensor dropout → STALE (simulator skips readings for it)
           status: next.staleStationId === s.id ? 'STALE' : getStationStatus(station, simReadings[0] ?? null, now),
           lastReadings: simReadings,
         };
@@ -244,12 +251,10 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   const handleToggleLive = useCallback(() => {
     setLiveMode((v) => {
       if (v) {
-        // Pausing — reset sim state so next activation re-initialises
         setSimState(null);
         simStateRef.current = null;
         breachShownRef.current = false;
-        setBreachToast(null);
-        // Restore base dto
+        setToasts([]);
         const overlay = loadOverlay();
         setLiveDto(
           Object.keys(overlay.stationPositions).length > 0
@@ -261,23 +266,18 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     });
   }, [baseDto]);
 
-  const handleCorrectiveAction = useCallback(() => {
-    setBreachToast(null);
+  const handleCorrectiveAction = useCallback((toastId: number) => {
+    dismissToast(toastId);
     setSimState((prev) => {
       if (!prev) return prev;
       const fixed = applyCorrectiveAction(prev);
       breachShownRef.current = false;
-      // Immediately update liveDto so the station goes green
       const now = new Date();
       const updatedStations: StationDTO[] = baseDto.stations.map((s) => {
         const simReadings = (fixed.readings.get(s.id) ?? []).slice(0, 5);
         const station = {
-          id: s.id,
-          name: s.name,
-          controlType: s.controlType,
-          position: s.position,
-          zoneId: s.zoneId,
-          fields: s.fields,
+          id: s.id, name: s.name, controlType: s.controlType,
+          position: s.position, zoneId: s.zoneId, fields: s.fields,
         };
         return {
           ...s,
@@ -288,7 +288,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
       setLiveDto((prev) => ({ ...prev, stations: updatedStations }));
       return fixed;
     });
-  }, [baseDto]);
+  }, [baseDto, dismissToast]);
 
   const handleStationClick = useCallback(
     (station: StationDTO) => {
@@ -317,15 +317,12 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     setTourIndex((i) => Math.max(i - 1, 0));
   }, []);
 
-  /** Called by StationMarker when a drag completes in edit mode */
   const handleStationMove = useCallback(
     (id: string, x: number, z: number) => {
       const overlay = loadOverlay();
       overlay.stationPositions[id] = { x, z };
       saveOverlay(overlay);
-      // Update liveDto with new position and recompute separation/flow
-      const updatedDto = applyOverlayToDto(baseDto, overlay);
-      setLiveDto(updatedDto);
+      setLiveDto(applyOverlayToDto(baseDto, overlay));
     },
     [baseDto],
   );
@@ -337,10 +334,6 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
   }, [baseDto]);
 
   const handleExport = useCallback(() => {
-    // Build a full TwinDataset by merging overlay into a base dataset shape
-    // We reconstruct a minimal exportable TwinDataset from liveDto + baseDto
-    const overlay = loadOverlay();
-    // We need the raw dataset — reconstruct station positions from liveDto
     const exportData = {
       schemaVersion: 1,
       source: { kind: 'manual', exportedAt: new Date().toISOString() },
@@ -353,12 +346,8 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
       allergens: [],
       zones: liveDto.zones,
       stations: liveDto.stations.map((s) => ({
-        id: s.id,
-        name: s.name,
-        controlType: s.controlType,
-        position: s.position,
-        zoneId: s.zoneId,
-        fields: s.fields,
+        id: s.id, name: s.name, controlType: s.controlType,
+        position: s.position, zoneId: s.zoneId, fields: s.fields,
       })),
       process: { id: 'exported', name: 'exported', steps: [], edges: [] },
       readings: liveDto.stations.flatMap((s) => s.lastReadings),
@@ -372,26 +361,39 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
     URL.revokeObjectURL(url);
   }, [liveDto]);
 
-  const handleImport = useCallback(() => {
-    // Actual import is handled by the file input in TwinToolbar via 'twin-import' event
-    setImportError(null);
-  }, []);
+  const handleImport = useCallback(() => { setImportError(null); }, []);
 
   const issueCount = liveDto.separationIssues.length;
 
+  // Panel presence affects ToastStack right margin
+  const panelOpen = selectedStation !== null;
+
   return (
     <>
-      {/* ── Side panel (Prompt 6) ───────────────────────────────────────────── */}
+      {/* ── Side panel ───────────────────────────────────────────────────────── */}
       <SidePanel
         station={selectedStation ? liveDto.stations.find((s) => s.id === selectedStation.id) ?? selectedStation : null}
         locale={locale}
         dir={dir}
         onClose={() => setSelectedStation(null)}
       />
+
+      {/* ── Toast stack (replaces inline breach banner) ──────────────────────── */}
+      <ToastStack
+        toasts={toasts}
+        dir={dir}
+        panelOpen={panelOpen}
+        locale={locale}
+        onDismiss={dismissToast}
+        onCorrectiveAction={handleCorrectiveAction}
+        t={t}
+      />
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <TwinHeader dto={liveDto} locale={locale} dir={dir} liveMode={liveMode} />
-        {/* ── Toolbar (Prompt 7 + 8 + 9) ────────────────────────────────── */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', direction: dir }}>
+
+        {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', direction: dir }}>
           <TwinToolbar
             locale={locale}
             dir={dir}
@@ -410,21 +412,23 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             onReset={handleReset}
             onExport={handleExport}
             onImport={handleImport}
+            onFitView={() => cameraActionRef.current?.fitView()}
+            onTopView={() => cameraActionRef.current?.topView()}
           />
 
           {/* Separator */}
-          <span style={{ width: '1px', height: '1.5rem', background: 'rgba(148,163,184,0.3)' }} />
+          <span style={{ width: '1px', height: '1.5rem', background: `${brand[400]}44` }} />
 
-          {/* Guided tour button (Prompt 9) */}
+          {/* Guided tour button */}
           {!tourActive ? (
             <button
               onClick={startTour}
               disabled={liveDto.tourSteps.length === 0}
               style={{
-                padding: '0.4rem 0.95rem',
-                borderRadius: '999px',
-                border: '1px solid #22c55e',
-                background: 'rgba(34,197,94,0.12)',
+                padding: '0.38rem 0.9rem',
+                borderRadius: radius.pill,
+                border: `1px solid ${themeStatus.ok}66`,
+                background: `${themeStatus.ok}18`,
                 color: '#bbf7d0',
                 fontWeight: 500,
                 fontSize: '0.875rem',
@@ -441,10 +445,10 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             <button
               onClick={exitTour}
               style={{
-                padding: '0.4rem 0.95rem',
-                borderRadius: '999px',
-                border: '1px solid #22c55e',
-                background: 'rgba(34,197,94,0.35)',
+                padding: '0.38rem 0.9rem',
+                borderRadius: radius.pill,
+                border: `1px solid ${themeStatus.ok}`,
+                background: `${themeStatus.ok}44`,
                 color: '#fff',
                 fontWeight: 500,
                 fontSize: '0.875rem',
@@ -459,9 +463,9 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           )}
 
           {/* Separator */}
-          <span style={{ width: '1px', height: '1.5rem', background: 'rgba(148,163,184,0.3)' }} />
+          <span style={{ width: '1px', height: '1.5rem', background: `${brand[400]}44` }} />
 
-          {/* Language switcher (Prompt 10) */}
+          {/* Language switcher */}
           <div
             style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', fontSize: '0.8rem' }}
             aria-label={t.nav.language}
@@ -472,11 +476,11 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
                 href={`/${l}/twin`}
                 style={{
                   padding: '0.2rem 0.55rem',
-                  borderRadius: '999px',
+                  borderRadius: radius.pill,
                   border: '1px solid',
-                  borderColor: l === locale ? '#3b82f6' : 'rgba(148,163,184,0.25)',
-                  background: l === locale ? 'rgba(59,130,246,0.3)' : 'rgba(15,23,42,0.55)',
-                  color: l === locale ? '#fff' : '#cbd5e1',
+                  borderColor: l === locale ? brand[400] : `${brand[400]}33`,
+                  background: l === locale ? `${brand[500]}44` : glass.panel,
+                  color: l === locale ? '#fff' : brand[300],
                   fontWeight: l === locale ? 700 : 400,
                   textDecoration: 'none',
                 }}
@@ -492,73 +496,15 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <div
             style={{
               padding: '0.4rem 0.75rem',
-              background: 'rgba(124,92,216,0.15)',
-              border: '1px solid #7c5cd8',
-              borderRadius: '8px',
+              background: `${brand[500]}1a`,
+              border: `1px solid ${brand[500]}`,
+              borderRadius: radius.sm,
               fontSize: '0.85rem',
-              color: '#ddd6fe',
+              color: brand[100],
               direction: dir,
             }}
           >
             {t.twin.editModeBanner}
-          </div>
-        )}
-
-        {/* ── Breach toast (Session 14) ──────────────────────────────────── */}
-        {breachToast && (
-          <div
-            role="alert"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: '0.6rem 1rem',
-              background: 'linear-gradient(90deg, rgba(127,29,29,0.85), rgba(15,23,42,0.75))',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid #ef4444',
-              boxShadow: '0 0 24px rgba(239,68,68,0.45)',
-              borderRadius: '12px',
-              fontSize: '0.95rem',
-              color: '#fecaca',
-              fontWeight: 600,
-              animation: 'pulse 1s infinite',
-              // keep the corrective-action button clear of the 320px side panel
-              ...(selectedStation ? (dir === 'rtl' ? { marginLeft: 330 } : { marginRight: 330 }) : {}),
-            }}
-          >
-            <span style={{ fontSize: '1.1rem' }}>🚨</span>
-            <span style={{ flex: 1 }}>{breachToast}</span>
-            <button
-              onClick={handleCorrectiveAction}
-              style={{
-                padding: '0.3rem 0.8rem',
-                borderRadius: '4px',
-                border: '2px solid #ef4444',
-                background: '#ef4444',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {locale === 'he' ? '✓ בצע פעולה מתקנת' : '✓ Apply corrective action'}
-            </button>
-            <button
-              onClick={() => setBreachToast(null)}
-              aria-label="Dismiss"
-              style={{
-                padding: '0.2rem 0.5rem',
-                borderRadius: '4px',
-                border: '1px solid #fca5a5',
-                background: 'transparent',
-                color: '#fecaca',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-              }}
-            >
-              ✕
-            </button>
           </div>
         )}
 
@@ -567,9 +513,9 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           <div
             style={{
               padding: '0.4rem 0.75rem',
-              background: 'rgba(127,29,29,0.35)',
-              border: '1px solid #ef4444',
-              borderRadius: '4px',
+              background: `rgba(120,20,20,0.35)`,
+              border: `1px solid ${themeStatus.deviation}55`,
+              borderRadius: radius.sm,
               fontSize: '0.85rem',
               color: '#fca5a5',
               direction: dir,
@@ -579,7 +525,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           </div>
         )}
 
-        {/* ── Status summary bar ─────────────────────────────────────────── */}
+        {/* ── Status summary bar ───────────────────────────────────────────────── */}
         <div
           style={{
             display: 'flex',
@@ -591,44 +537,52 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
         >
           {liveDto.stations.map((station) => {
             const displayName = locale === 'en' && station.nameEn ? station.nameEn : station.name;
+            const sc = stationColor(station.status);
             return (
               <button
                 key={station.id}
                 onClick={() => !editMode && handleStationClick(station)}
                 style={{
                   padding: '0.3rem 0.8rem',
-                  borderRadius: '999px',
-                  background: 'rgba(15,23,42,0.55)',
+                  borderRadius: radius.pill,
+                  background: glass.panel,
                   backdropFilter: 'blur(10px)',
-                  color: '#e2e8f0',
+                  color: '#fff',
                   fontWeight: 500,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  border: `1px solid ${selectedStation?.id === station.id ? '#fff' : statusColor(station.status) + '88'}`,
-                  boxShadow: station.status === 'OUT_OF_RANGE' ? '0 0 14px rgba(239,68,68,0.6)' : 'none',
+                  border: `1px solid ${selectedStation?.id === station.id ? '#fff' : sc + '88'}`,
+                  boxShadow: station.status === 'OUT_OF_RANGE' ? `0 0 12px ${themeStatus.deviation}66` : 'none',
                   cursor: editMode ? 'default' : 'pointer',
+                  transition: 'border-color 0.15s',
                 }}
                 title={`${displayName} — ${t.status[station.status as keyof typeof t.status]}`}
               >
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: statusColor(station.status), boxShadow: `0 0 8px ${statusColor(station.status)}` }} />
+                <span
+                  style={{
+                    width: 8, height: 8, borderRadius: 999,
+                    background: sc,
+                    boxShadow: `0 0 6px ${sc}`,
+                  }}
+                />
                 {displayName}
               </button>
             );
           })}
         </div>
 
-        {/* ── Empty state ────────────────────────────────────────────────── */}
+        {/* Empty state */}
         {liveDto.stations.length === 0 && liveDto.zones.length === 0 && (
           <div
             data-testid="empty-state"
             style={{
               padding: '2rem',
               textAlign: 'center',
-              color: '#94a3b8',
+              color: brand[300],
               fontSize: '1rem',
-              border: '1px dashed #e5e7eb',
-              borderRadius: '8px',
+              border: `1px dashed ${brand[500]}55`,
+              borderRadius: radius.md,
               direction: dir,
             }}
           >
@@ -636,7 +590,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           </div>
         )}
 
-        {/* ── 3-D Canvas + guided tour overlay ──────────────────────────── */}
+        {/* ── 3-D Canvas ───────────────────────────────────────────────────────── */}
         <div style={{ position: 'relative' }}>
           <TwinCanvas
             dto={liveDto}
@@ -645,12 +599,13 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             showFlow={showFlow}
             showSeparation={showSeparation}
             editMode={editMode && !tourActive}
+            selectedStationId={selectedStation?.id ?? null}
             tourActive={tourActive}
             onStationClick={handleStationClick}
             onStationMove={handleStationMove}
+            cameraActionRef={cameraActionRef}
           />
 
-          {/* Guided tour card overlay (Prompt 9) */}
           {tourActive && liveDto.tourSteps.length > 0 && (
             <GuidedTourCard
               steps={liveDto.tourSteps}
@@ -664,7 +619,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           )}
         </div>
 
-        {/* ── Info row: issues + chain ───────────────────────────────────── */}
+        {/* ── Info row ─────────────────────────────────────────────────────────── */}
         <div
           style={{
             display: 'flex',
@@ -675,34 +630,29 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             direction: dir,
           }}
         >
-          {/* Separation issues badge */}
           <span
             style={{
               padding: '0.25rem 0.75rem',
-              borderRadius: '999px',
-              background: issueCount > 0 ? 'rgba(239,68,68,0.18)' : 'rgba(34,197,94,0.18)',
-              border: `1px solid ${issueCount > 0 ? '#ef4444' : '#22c55e'}`,
+              borderRadius: radius.pill,
+              background: issueCount > 0 ? `${themeStatus.deviation}22` : `${themeStatus.ok}22`,
+              border: `1px solid ${issueCount > 0 ? themeStatus.deviation : themeStatus.ok}`,
               color: issueCount > 0 ? '#fecaca' : '#bbf7d0',
               fontWeight: 600,
             }}
           >
-            {issueCount > 0
-              ? `${issueCount} ${t.twin.issues}`
-              : t.twin.noIssues}
+            {issueCount > 0 ? `${issueCount} ${t.twin.issues}` : t.twin.noIssues}
           </span>
 
-          {/* Flow segment count */}
-          <span style={{ color: '#94a3b8' }}>
+          <span style={{ color: brand[300] }}>
             {liveDto.flowSegments.length} {t.twin.flowSegments}
           </span>
 
-          {/* Chain verification */}
           <span
             style={{
               padding: '0.25rem 0.75rem',
-              borderRadius: '999px',
-              background: liveDto.chainResult.valid ? 'rgba(34,197,94,0.18)' : 'rgba(245,158,11,0.18)',
-              border: `1px solid ${liveDto.chainResult.valid ? '#22c55e' : '#f59e0b'}`,
+              borderRadius: radius.pill,
+              background: liveDto.chainResult.valid ? `${themeStatus.ok}22` : `${themeStatus.expiring}22`,
+              border: `1px solid ${liveDto.chainResult.valid ? themeStatus.ok : themeStatus.expiring}`,
               color: liveDto.chainResult.valid ? '#bbf7d0' : '#fde68a',
               fontWeight: 600,
             }}
@@ -711,7 +661,7 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
           </span>
         </div>
 
-        {/* ── Separation issues list ─────────────────────────────────────── */}
+        {/* ── Separation issues list ───────────────────────────────────────────── */}
         {issueCount > 0 && (
           <ul
             style={{
@@ -732,31 +682,162 @@ export default function TwinView({ dto: baseDto, locale }: TwinViewProps) {
             ))}
           </ul>
         )}
-
       </div>
     </>
   );
 }
 
-function statusColor(status: string): string {
-  switch (status) {
-    case 'OK':
-      return '#22c55e';
-    case 'OUT_OF_RANGE':
-      return '#ef4444';
-    case 'STALE':
-      return '#f59e0b';
-    case 'NO_DATA':
-    default:
-      return '#94a3b8';
-  }
+// ── ToastStack ────────────────────────────────────────────────────────────────
+// Fixed, top 72px, centered. Uses CSS logical properties.
+// When panel is open, inset-inline-end = 340px + 16px to stay in the free area.
+
+interface ToastStackProps {
+  toasts: Toast[];
+  dir: 'rtl' | 'ltr';
+  panelOpen: boolean;
+  locale: Locale;
+  onDismiss: (id: number) => void;
+  onCorrectiveAction: (id: number) => void;
+  t: ReturnType<typeof getDictionary>;
 }
 
-/**
- * Applies a layout overlay to a DTO — updates station positions and
- * recomputes separation issues based on new positions.
- * Readings are never touched (append-only constraint).
- */
+function ToastStack({ toasts, dir, panelOpen, locale, onDismiss, onCorrectiveAction, t }: ToastStackProps) {
+  if (toasts.length === 0) return null;
+
+  // When panel is open, shift the toast stack away from the panel edge
+  const insetInlineEnd = panelOpen ? '356px' : '16px';
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: '72px',
+        // Centered by default; when panel is open we push toward the free side
+        insetInlineEnd,
+        left: panelOpen ? 'auto' : '50%',
+        transform: panelOpen ? 'none' : 'translateX(-50%)',
+        width: 'min(520px, calc(100vw - 32px))',
+        zIndex: 100,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        direction: dir,
+      }}
+    >
+      {toasts.map((toast) => (
+        <ToastItem
+          key={toast.id}
+          toast={toast}
+          locale={locale}
+          onDismiss={() => onDismiss(toast.id)}
+          onAction={() => onCorrectiveAction(toast.id)}
+          t={t}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ToastItem({
+  toast,
+  locale,
+  onDismiss,
+  onAction,
+  t,
+}: {
+  toast: Toast;
+  locale: Locale;
+  onDismiss: () => void;
+  onAction: () => void;
+  t: ReturnType<typeof getDictionary>;
+}) {
+  const isBreachKind = toast.kind === 'breach';
+  const borderColor = isBreachKind ? themeStatus.deviation : brand[500];
+
+  return (
+    <div
+      role="alert"
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '0.65rem',
+        paddingBlock: '0.65rem',
+        paddingInline: '1rem',
+        background: glass.dark,
+        backdropFilter: 'blur(12px)',
+        border: `1px solid ${borderColor}`,
+        boxShadow: `0 0 20px ${borderColor}44`,
+        borderRadius: radius.md,
+        fontSize: '0.9rem',
+        color: '#fff',
+        fontWeight: 500,
+        // No pulse on the container — pulse icon only
+      }}
+    >
+      {/* Icon — pulsed for breach */}
+      <span
+        style={{
+          fontSize: '1.1rem',
+          flexShrink: 0,
+          animation: isBreachKind ? 'pulse-icon 1s ease-in-out infinite' : undefined,
+          display: 'inline-block',
+        }}
+      >
+        🚨
+      </span>
+
+      {/* Message — wraps normally */}
+      <span style={{ flex: 1, lineHeight: 1.45 }}>{toast.message}</span>
+
+      {/* Corrective action button */}
+      {isBreachKind && (
+        <button
+          onClick={onAction}
+          style={{
+            padding: '0.3rem 0.75rem',
+            borderRadius: radius.sm,
+            border: `2px solid ${themeStatus.deviation}`,
+            background: themeStatus.deviation,
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          ✓ {t.twin.correctiveAction}
+        </button>
+      )}
+
+      {/* Dismiss */}
+      <button
+        onClick={onDismiss}
+        aria-label={t.twin.dismiss}
+        style={{
+          padding: '0.2rem 0.4rem',
+          borderRadius: radius.sm,
+          border: `1px solid ${brand[400]}55`,
+          background: 'transparent',
+          color: brand[300],
+          cursor: 'pointer',
+          fontSize: '0.85rem',
+          flexShrink: 0,
+          lineHeight: 1,
+        }}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function stationColor(status: string): string {
+  return statusPalette[status as keyof typeof statusPalette] ?? statusPalette.NO_DATA;
+}
+
 function applyOverlayToDto(base: TwinDTO, overlay: LayoutOverlay): TwinDTO {
   const updatedStations = base.stations.map((s) => {
     const override = overlay.stationPositions[s.id];
@@ -764,14 +845,8 @@ function applyOverlayToDto(base: TwinDTO, overlay: LayoutOverlay): TwinDTO {
     return { ...s, position: { ...s.position, ...override } };
   });
 
-  // Recompute flow and separation with updated positions.
-  // We need a full TwinDataset shape — the domain functions only use
-  // zones, stations, process (steps/edges), and allergens.
-  // schemaVersion / source / site / readings are required by the Zod type
-  // but not accessed by buildFlowPaths / findSeparationIssues.
-  // Using `as unknown as TwinDataset` is safe here because the domain
-  // functions do not read the fields we omit. Type inference cannot narrow
-  // a partial object literal to TwinDataset without this cast.
+  // Type inference cannot narrow a partial object literal to TwinDataset without
+  // this cast — the domain functions do not access the fields we omit.
   const minimalDataset = {
     schemaVersion: 1 as const,
     source: { kind: 'seed' as const },
@@ -779,19 +854,10 @@ function applyOverlayToDto(base: TwinDTO, overlay: LayoutOverlay): TwinDTO {
     allergens: [],
     zones: base.zones,
     stations: updatedStations.map((s) => ({
-      id: s.id,
-      name: s.name,
-      controlType: s.controlType,
-      position: s.position,
-      zoneId: s.zoneId,
-      fields: s.fields,
+      id: s.id, name: s.name, controlType: s.controlType,
+      position: s.position, zoneId: s.zoneId, fields: s.fields,
     })),
-    process: {
-      id: 'live',
-      name: 'live',
-      steps: [],
-      edges: [],
-    },
+    process: { id: 'live', name: 'live', steps: [], edges: [] },
     readings: [],
   } as unknown as import('@/domain/schema').TwinDataset;
 
@@ -803,8 +869,19 @@ function applyOverlayToDto(base: TwinDTO, overlay: LayoutOverlay): TwinDTO {
   };
 }
 
-// ── Header with logo, live clock and KPI strip (manual polish after Bob budget)
-function TwinHeader({ dto, locale, dir, liveMode }: { dto: TwinDTO; locale: Locale; dir: 'rtl' | 'ltr'; liveMode: boolean }) {
+// ── TwinHeader ────────────────────────────────────────────────────────────────
+
+function TwinHeader({
+  dto,
+  locale,
+  dir,
+  liveMode,
+}: {
+  dto: TwinDTO;
+  locale: Locale;
+  dir: 'rtl' | 'ltr';
+  liveMode: boolean;
+}) {
   const t = getDictionary(locale);
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
@@ -812,36 +889,131 @@ function TwinHeader({ dto, locale, dir, liveMode }: { dto: TwinDTO; locale: Loca
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
   const ccps = dto.stations.filter((s) => s.controlType === 'CCP');
   const ok = ccps.filter((s) => s.status === 'OK').length;
   const open = dto.stations.filter((s) => s.status === 'OUT_OF_RANGE').length;
   const he = locale === 'he';
+
   const kpi = (label: string, value: string, color: string) => (
-    <div style={{ padding: '0.45rem 0.9rem', borderRadius: 12, background: 'rgba(15,23,42,0.55)', border: `1px solid ${color}55`, minWidth: 120 }}>
-      <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8' }}>{label}</div>
-      <div style={{ fontSize: '1.15rem', fontWeight: 700, color, textShadow: `0 0 10px ${color}88` }}>{value}</div>
+    <div
+      style={{
+        padding: '0.45rem 0.9rem',
+        borderRadius: radius.md,
+        background: glass.card,
+        border: `1px solid ${brand[500]}44`,
+        minWidth: 120,
+      }}
+    >
+      <div
+        style={{
+          fontSize: '0.68rem',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: brand[300],
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: '1.15rem',
+          fontWeight: 700,
+          color,
+          textShadow: `0 0 10px ${color}66`,
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
+
   return (
-    <header style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', direction: dir, padding: '0.6rem 1rem', borderRadius: 16, background: 'linear-gradient(90deg, rgba(30,58,95,0.55), rgba(15,23,42,0.4))', border: '1px solid rgba(148,163,184,0.18)', backdropFilter: 'blur(12px)' }}>
+    <header
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1.25rem',
+        flexWrap: 'wrap',
+        direction: dir,
+        padding: '0.6rem 1rem',
+        borderRadius: radius.lg,
+        background: glass.panel,
+        border: `1px solid ${brand[500]}44`,
+        backdropFilter: 'blur(14px)',
+        boxShadow: `0 2px 16px rgba(36,18,80,0.5)`,
+      }}
+    >
+      {/* Logo tile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
-        <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#22d3ee,#3b82f6 55%,#8b5cf6)', display: 'grid', placeItems: 'center', fontWeight: 900, color: '#fff', fontSize: 20, boxShadow: '0 0 18px rgba(59,130,246,0.6)' }}>A</div>
+        <div
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: radius.md,
+            background: `linear-gradient(135deg, ${brand[500]} 0%, ${brand[700]} 100%)`,
+            display: 'grid',
+            placeItems: 'center',
+            fontWeight: 900,
+            color: '#fff',
+            fontSize: 20,
+            boxShadow: `0 0 16px ${brand[500]}66`,
+          }}
+        >
+          A
+        </div>
         <div>
-          <div style={{ fontWeight: 900, letterSpacing: '0.18em', fontSize: '1.05rem', background: 'linear-gradient(90deg,#e0f2fe,#93c5fd)', WebkitBackgroundClip: 'text', color: 'transparent' }}>ASADRA</div>
-          <h1 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#cbd5e1' }}>
+          <div
+            style={{
+              fontWeight: 900,
+              letterSpacing: '0.18em',
+              fontSize: '1.05rem',
+              background: `linear-gradient(90deg, ${brand[100]}, ${brand[300]})`,
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            ASADRA
+          </div>
+          <h1 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: brand[300] }}>
             {t.twin.title} — {locale === 'en' && dto.siteNameEn ? dto.siteNameEn : dto.siteName}
           </h1>
         </div>
       </div>
+
       <div style={{ flex: 1 }} />
-      {kpi(he ? 'נקודות CCP תקינות' : 'CCPs OK', `${ok}/${ccps.length}`, ok === ccps.length ? '#22c55e' : '#ef4444')}
-      {kpi(he ? 'חריגות פתוחות' : 'Open deviations', String(open), open ? '#ef4444' : '#22c55e')}
-      {kpi(he ? 'שלמות שרשרת' : 'Chain integrity', dto.chainResult.valid ? (he ? 'מאומתת ✓' : 'Verified ✓') : (he ? 'שבורה' : 'Broken'), dto.chainResult.valid ? '#22d3ee' : '#f59e0b')}
+
+      {/* KPI tiles */}
+      {kpi(
+        he ? 'נקודות CCP תקינות' : 'CCPs OK',
+        `${ok}/${ccps.length}`,
+        ok === ccps.length ? themeStatus.ok : themeStatus.deviation,
+      )}
+      {kpi(
+        he ? 'חריגות פתוחות' : 'Open deviations',
+        String(open),
+        open ? themeStatus.deviation : themeStatus.ok,
+      )}
+      {kpi(
+        he ? 'שלמות שרשרת' : 'Chain integrity',
+        dto.chainResult.valid ? (he ? 'מאומתת ✓' : 'Verified ✓') : (he ? 'שבורה' : 'Broken'),
+        dto.chainResult.valid ? brand[300] : themeStatus.expiring,
+      )}
+
+      {/* Clock */}
       <div style={{ textAlign: 'center', minWidth: 110 }}>
-        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: '1.25rem', color: '#e2e8f0', fontWeight: 700 }} suppressHydrationWarning>
+        <div
+          style={{
+            fontFamily: 'ui-monospace, monospace',
+            fontSize: '1.25rem',
+            color: '#fff',
+            fontWeight: 700,
+          }}
+          suppressHydrationWarning
+        >
           {now ? now.toLocaleTimeString(he ? 'he-IL' : 'en-GB') : '--:--:--'}
         </div>
-        <div style={{ fontSize: '0.7rem', color: liveMode ? '#22c55e' : '#94a3b8', letterSpacing: '0.1em' }}>
+        <div style={{ fontSize: '0.7rem', color: liveMode ? themeStatus.ok : brand[300], letterSpacing: '0.1em' }}>
           {liveMode ? '● LIVE' : '❚❚ PAUSED'}
         </div>
       </div>

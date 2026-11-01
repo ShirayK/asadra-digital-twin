@@ -2,69 +2,61 @@
 
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
+import { brand, hygiene, stationStatus, glass, radius } from '@/theme/asadra';
 
 interface LegendProps {
   locale: Locale;
   dir?: 'ltr' | 'rtl';
 }
 
-const HYGIENE_COLORS: Record<string, string> = {
-  RAW: '#ef4444',
-  LOW_RISK: '#f59e0b',
-  HIGH_CARE: '#22c55e',
-  PACKAGING: '#3b82f6',
-  STORAGE: '#8b5cf6',
-  NON_FOOD: '#6b7280',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  OK: '#22c55e',
-  OUT_OF_RANGE: '#ef4444',
-  STALE: '#f59e0b',
-  NO_DATA: '#9ca3af',
-};
-
-const SWATCH_SIZE = 12;
+const SWATCH_SIZE = 11;
 
 /**
  * Legend panel overlaid on top of the 3-D canvas.
  * Placed in the bottom corner; direction-aware for RTL Hebrew.
+ * Uses brand purple glass panel with purple-derived swatches.
  */
 export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
   const t = getDictionary(locale);
-
-  const posStyle: React.CSSProperties =
-    dir === 'rtl'
-      ? { bottom: 12, left: 12 }
-      : { bottom: 12, right: 12 };
 
   return (
     <div
       style={{
         position: 'absolute',
-        ...posStyle,
-        background: 'rgba(10,15,28,0.6)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(148,163,184,0.22)',
-        color: '#f1f5f9',
+        bottom: 12,
+        ...(dir === 'rtl' ? { left: 12 } : { right: 12 }),
+        background: glass.dark,
+        backdropFilter: 'blur(14px)',
+        border: `1px solid ${glass.darkBorder}55`,
+        color: brand[100],
         fontSize: 11,
-        borderRadius: 12,
-        padding: '8px 12px',
+        borderRadius: radius.md,
+        padding: '10px 14px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 6,
+        gap: 5,
         pointerEvents: 'none',
         direction: dir,
-        minWidth: 140,
+        minWidth: 148,
         zIndex: 10,
+        boxShadow: `0 4px 24px rgba(36,18,80,0.6)`,
       }}
     >
-      {/* Hygiene classes */}
-      <div style={{ fontWeight: 700, fontSize: 10, opacity: 0.7, marginBottom: 2 }}>
+      {/* Hygiene zone section */}
+      <div
+        style={{
+          fontWeight: 700,
+          fontSize: 10,
+          textTransform: 'uppercase',
+          letterSpacing: '0.07em',
+          color: brand[300],
+          marginBottom: 2,
+        }}
+      >
         {t.legend.hygieneZone}
       </div>
-      {Object.entries(HYGIENE_COLORS).map(([key, color]) => (
-        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {(Object.entries(hygiene) as [keyof typeof hygiene, string][]).map(([key, color]) => (
+        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span
             style={{
               display: 'inline-block',
@@ -72,22 +64,32 @@ export default function Legend({ locale, dir = 'ltr' }: LegendProps) {
               height: SWATCH_SIZE,
               background: color,
               borderRadius: 2,
-              opacity: 0.85,
               flexShrink: 0,
+              opacity: 0.9,
             }}
           />
           <span>{t.hygieneClass[key as keyof typeof t.hygieneClass]}</span>
         </div>
       ))}
 
-      <div style={{ height: 1, background: '#334155', margin: '2px 0' }} />
+      {/* Divider */}
+      <div style={{ height: 1, background: `${brand[500]}44`, margin: '3px 0' }} />
 
-      {/* Station statuses */}
-      <div style={{ fontWeight: 700, fontSize: 10, opacity: 0.7, marginBottom: 2 }}>
+      {/* Station status section */}
+      <div
+        style={{
+          fontWeight: 700,
+          fontSize: 10,
+          textTransform: 'uppercase',
+          letterSpacing: '0.07em',
+          color: brand[300],
+          marginBottom: 2,
+        }}
+      >
         {t.legend.stationStatus}
       </div>
-      {Object.entries(STATUS_COLORS).map(([key, color]) => (
-        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {(Object.entries(stationStatus) as [keyof typeof stationStatus, string][]).map(([key, color]) => (
+        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span
             style={{
               display: 'inline-block',
