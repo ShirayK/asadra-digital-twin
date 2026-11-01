@@ -2,44 +2,78 @@
 
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 import type { Group, Mesh } from 'three';
 
-// ─── Detail helpers (manual polish after Bob budget) ──────────────────────────
+// ─── Brand / material constants ───────────────────────────────────────────────
 
-/** Round pressure/temperature gauge with a glowing face and needle. */
-function Gauge({ position, scale = 1, rotationY = 0 }: { position: [number, number, number]; scale?: number; rotationY?: number }) {
+const STEEL_COLOR = '#b8c4cc';
+const STEEL_PAINTED = '#d4dde5';  // lighter painted panel colour
+const BRAND_PURPLE = '#41228e';
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+/** A round face-on gauge (pressure / temperature) with needle. */
+function Gauge({
+  position,
+  s = 1,
+  rotY = 0,
+}: {
+  position: [number, number, number];
+  s?: number;
+  rotY?: number;
+}) {
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
+    <group position={position} rotation={[0, rotY, 0]}>
+      {/* bezel */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.09 * scale, 0.09 * scale, 0.04 * scale, 18]} />
+        <cylinderGeometry args={[0.09 * s, 0.09 * s, 0.04 * s, 16]} />
         <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
       </mesh>
-      <mesh position={[0, 0, 0.022 * scale]}>
-        <circleGeometry args={[0.075 * scale, 18]} />
-        <meshStandardMaterial color="#ede9fe" emissive="#a78bfa" emissiveIntensity={0.5} />
+      {/* face */}
+      <mesh position={[0, 0, 0.022 * s]}>
+        <circleGeometry args={[0.075 * s, 16]} />
+        <meshStandardMaterial color="#ede9fe" emissive="#a78bfa" emissiveIntensity={0.5} roughness={0.1} />
       </mesh>
-      <mesh position={[0.02 * scale, 0.02 * scale, 0.026 * scale]} rotation={[0, 0, -0.8]}>
-        <boxGeometry args={[0.008 * scale, 0.06 * scale, 0.004 * scale]} />
+      {/* needle */}
+      <mesh position={[0.015 * s, 0.02 * s, 0.026 * s]} rotation={[0, 0, -0.7]}>
+        <boxGeometry args={[0.007 * s, 0.055 * s, 0.003 * s]} />
         <meshBasicMaterial color="#dc2626" />
       </mesh>
     </group>
   );
 }
 
-/** Side ladder: two rails with rungs. */
-function Ladder({ height, x, scale = 1 }: { height: number; x: number; scale?: number }) {
-  const rungs = Math.max(3, Math.round(height / (0.14 * scale)));
+/** Small brand plate (purple rectangle). */
+function BrandPlate({
+  position,
+  s = 1,
+}: {
+  position: [number, number, number];
+  s?: number;
+}) {
+  return (
+    <mesh position={position}>
+      <boxGeometry args={[0.22 * s, 0.07 * s, 0.01 * s]} />
+      <meshStandardMaterial color={BRAND_PURPLE} roughness={0.5} metalness={0.3} emissive={BRAND_PURPLE} emissiveIntensity={0.25} />
+    </mesh>
+  );
+}
+
+/** Side ladder: two rails + rungs. */
+function Ladder({ height, x, s = 1 }: { height: number; x: number; s?: number }) {
+  const rungs = Math.max(3, Math.round(height / (0.14 * s)));
   return (
     <group position={[x, 0, 0]}>
       {[-1, 1].map((side) => (
-        <mesh key={side} position={[0, height / 2, side * 0.09 * scale]}>
-          <boxGeometry args={[0.025 * scale, height, 0.025 * scale]} />
-          <meshStandardMaterial color="#facc15" metalness={0.4} roughness={0.5} />
+        <mesh key={side} position={[0, height / 2, side * 0.08 * s]}>
+          <boxGeometry args={[0.022 * s, height, 0.022 * s]} />
+          <meshStandardMaterial color="#ca8a04" metalness={0.4} roughness={0.5} />
         </mesh>
       ))}
       {Array.from({ length: rungs }).map((_, i) => (
         <mesh key={i} position={[0, (i + 0.5) * (height / rungs), 0]}>
-          <boxGeometry args={[0.018 * scale, 0.018 * scale, 0.18 * scale]} />
+          <boxGeometry args={[0.016 * s, 0.016 * s, 0.16 * s]} />
           <meshStandardMaterial color="#eab308" metalness={0.4} roughness={0.5} />
         </mesh>
       ))}
@@ -47,8 +81,16 @@ function Ladder({ height, x, scale = 1 }: { height: number; x: number; scale?: n
   );
 }
 
-/** Stylised capsule worker in hygiene whites, gently bobbing. */
-export function WorkerFigure({ position, color = '#f8fafc', phase = 0 }: { position: [number, number, number]; color?: string; phase?: number }) {
+/** Stylised worker in hygiene whites, gently bobbing. */
+export function WorkerFigure({
+  position,
+  color = '#f8fafc',
+  phase = 0,
+}: {
+  position: [number, number, number];
+  color?: string;
+  phase?: number;
+}) {
   const ref = useRef<Group>(null);
   useFrame(({ clock }) => {
     if (ref.current) {
@@ -75,223 +117,593 @@ export function WorkerFigure({ position, color = '#f8fafc', phase = 0 }: { posit
   );
 }
 
-// ─── Shared materials (created once, reused) ──────────────────────────────────
-
-function SteelMat({ color = '#b0b8c1', roughness = 0.25, metalness = 0.85 }: {
-  color?: string;
-  roughness?: number;
-  metalness?: number;
-}) {
+// ─── 1. RECEIVING DOCK ─────────────────────────────────────────────────────────
+/**
+ * Loading dock: raised platform, stacked sacks on pallets, pallet jack,
+ * platform scale with digital display, temp probe post.
+ */
+export function ReceivingDockModel({ scale: s = 1 }: { scale?: number }) {
   return (
-    <meshStandardMaterial color={color} roughness={roughness} metalness={metalness} />
+    <group>
+      {/* Dock platform */}
+      <mesh castShadow receiveShadow position={[0, 0.08 * s, 0]}>
+        <boxGeometry args={[1.8 * s, 0.16 * s, 1.3 * s]} />
+        <meshStandardMaterial color="#475569" roughness={0.8} metalness={0.1} />
+      </mesh>
+      {/* Dock bumper strip */}
+      <mesh position={[0, 0.13 * s, -0.66 * s]}>
+        <boxGeometry args={[1.8 * s, 0.1 * s, 0.06 * s]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.9} />
+      </mesh>
+
+      {/* Pallet #1 with stacked sacks */}
+      <SackPallet position={[-0.5 * s, 0.16 * s, 0.1 * s]} s={s} />
+      {/* Pallet #2 */}
+      <SackPallet position={[0.55 * s, 0.16 * s, 0.05 * s]} s={s} color="#d4a76a" />
+
+      {/* Pallet jack */}
+      <PalletJack position={[0.05 * s, 0.16 * s, 0.52 * s]} s={s} />
+
+      {/* Platform scale */}
+      <PlatformScale position={[-0.6 * s, 0.16 * s, 0.58 * s]} s={s} />
+
+      {/* Temp probe post */}
+      <mesh castShadow position={[0.78 * s, 0.7 * s, 0.18 * s]}>
+        <cylinderGeometry args={[0.025 * s, 0.025 * s, 1.1 * s, 6]} />
+        <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+      </mesh>
+      <mesh position={[0.78 * s, 0.6 * s, 0.35 * s]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.05 * s, 0.05 * s, 0.13 * s, 8]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.5} metalness={0.4} />
+      </mesh>
+
+      <BrandPlate position={[0, 0.22 * s, 0.66 * s]} s={s} />
+    </group>
   );
 }
 
-function PipeMat() {
-  return <meshStandardMaterial color="#8a9bb0" roughness={0.3} metalness={0.9} />;
-}
-
-// ─── Stainless steel tank / kettle ────────────────────────────────────────────
-/**
- * Vertical cylinder with a domed top cap, four legs, and a side pipe.
- * Used for soaking tank, cooking kettle, tahini mixer.
- */
-export function TankModel({
-  scale = 1,
-  color = '#c5cdd4',
+function SackPallet({
+  position,
+  s = 1,
+  color = '#c8a85e',
 }: {
-  scale?: number;
+  position: [number, number, number];
+  s?: number;
   color?: string;
 }) {
-  const r = 0.38 * scale;
-  const h = 1.0 * scale;
-  const legH = 0.28 * scale;
-
   return (
-    <group position={[0, legH, 0]}>
-      {/* Tank body */}
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[r, r, h, 20]} />
-        <SteelMat color={color} />
+    <group position={position}>
+      {/* wooden pallet deck */}
+      <mesh castShadow>
+        <boxGeometry args={[0.6 * s, 0.08 * s, 0.5 * s]} />
+        <meshStandardMaterial color="#7c5a2e" roughness={0.9} />
       </mesh>
-
-      {/* Domed top cap */}
-      <mesh castShadow position={[0, h / 2, 0]}>
-        <sphereGeometry args={[r, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <SteelMat color={color} />
-      </mesh>
-
-      {/* Conical bottom */}
-      <mesh castShadow position={[0, -h / 2, 0]} rotation={[Math.PI, 0, 0]}>
-        <coneGeometry args={[r, 0.22 * scale, 20]} />
-        <SteelMat color={color} roughness={0.3} />
-      </mesh>
-
-      {/* Four legs */}
-      {[[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([lx, lz], i) => (
-        <mesh key={i} castShadow position={[lx * r * 0.7, -h / 2 - legH / 2, lz * r * 0.7]}>
-          <cylinderGeometry args={[0.035 * scale, 0.035 * scale, legH, 6]} />
-          <SteelMat color="#7a8590" />
+      {/* Boards on deck */}
+      {[-0.2, 0, 0.2].map((bx) => (
+        <mesh key={bx} position={[bx * s, 0.045 * s, 0]}>
+          <boxGeometry args={[0.04 * s, 0.02 * s, 0.5 * s]} />
+          <meshStandardMaterial color="#6b4a1e" roughness={0.95} />
         </mesh>
       ))}
-
-      {/* Side outlet pipe */}
-      <mesh castShadow position={[r + 0.1 * scale, -h * 0.2, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.045 * scale, 0.045 * scale, 0.22 * scale, 8]} />
-        <PipeMat />
-      </mesh>
-
-      {/* Manway ring on dome */}
-      <mesh position={[0, h / 2 + 0.09 * scale, 0]}>
-        <torusGeometry args={[r * 0.32, 0.03 * scale, 6, 16]} />
-        <SteelMat color="#8a9aa8" roughness={0.2} />
-      </mesh>
-
-      {/* Weld seams */}
-      {[-h * 0.25, h * 0.25].map((y, i) => (
-        <mesh key={i} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[r * 1.005, 0.008 * scale, 4, 24]} />
-          <SteelMat color="#9aa6b2" />
+      {/* Sacks stack */}
+      {[0, 1, 2].map((row) => (
+        <mesh key={row} castShadow position={[0, (0.08 + 0.14 + row * 0.18) * s, 0]}>
+          <boxGeometry args={[(0.56 - row * 0.03) * s, 0.16 * s, (0.46 - row * 0.02) * s]} />
+          <meshStandardMaterial color={color} roughness={0.85} />
         </mesh>
       ))}
-
-      {/* Ladder to the manway */}
-      <group position={[0, -h / 2 - legH, 0]}>
-        <Ladder height={h + legH + r * 0.6} x={-r - 0.06 * scale} scale={scale} />
-      </group>
-
-      {/* Gauge */}
-      <Gauge position={[0, h * 0.15, r + 0.02 * scale]} scale={scale} />
+      {/* stretch wrap */}
+      <mesh position={[0, (0.08 + 0.14 + 0.18) * s, 0]}>
+        <boxGeometry args={[0.58 * s, 0.01 * s, 0.48 * s]} />
+        <meshStandardMaterial color="#e2e8f0" transparent opacity={0.45} />
+      </mesh>
     </group>
   );
 }
 
-// ─── Cooking kettle (larger, with heating jacket indicators) ──────────────────
-export function KettleModel({ scale = 1 }: { scale?: number }) {
-  const r = 0.5 * scale;
-  const h = 1.1 * scale;
-  const legH = 0.32 * scale;
-
+function PalletJack({
+  position,
+  s = 1,
+}: {
+  position: [number, number, number];
+  s?: number;
+}) {
   return (
-    <group position={[0, legH, 0]}>
-      {/* Main kettle body */}
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[r, r * 0.9, h, 24]} />
-        <meshStandardMaterial color="#c8cfd5" roughness={0.2} metalness={0.88} />
+    <group position={position}>
+      {/* Frame body */}
+      <mesh castShadow>
+        <boxGeometry args={[0.12 * s, 0.08 * s, 0.55 * s]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.5} metalness={0.3} />
       </mesh>
-
-      {/* Dome top */}
-      <mesh castShadow position={[0, h / 2, 0]}>
-        <sphereGeometry args={[r, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#c8cfd5" roughness={0.2} metalness={0.88} />
-      </mesh>
-
-      {/* Heating jacket band */}
-      <mesh position={[0, -h * 0.1, 0]}>
-        <cylinderGeometry args={[r + 0.04 * scale, r + 0.04 * scale, h * 0.55, 24]} />
-        <meshStandardMaterial color="#9fb0be" roughness={0.35} metalness={0.7} transparent opacity={0.7} />
-      </mesh>
-
-      {/* Steam pipe up */}
-      <mesh castShadow position={[0.06 * scale, h / 2 + 0.25 * scale, 0]}>
-        <cylinderGeometry args={[0.04 * scale, 0.04 * scale, 0.45 * scale, 8]} />
-        <PipeMat />
-      </mesh>
-
-      <Gauge position={[0, h * 0.25, r + 0.06 * scale]} scale={scale * 1.2} />
-      <Gauge position={[r + 0.06 * scale, h * 0.25, 0]} scale={scale} rotationY={Math.PI / 2} />
-      <group position={[0, -h / 2 - legH, 0]}>
-        <Ladder height={h + legH + r * 0.5} x={-r - 0.08 * scale} scale={scale} />
-      </group>
-
-      {/* Four heavy legs */}
-      {[[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([lx, lz], i) => (
-        <mesh key={i} castShadow position={[lx * r * 0.65, -h / 2 - legH / 2, lz * r * 0.65]}>
-          <cylinderGeometry args={[0.05 * scale, 0.055 * scale, legH, 6]} />
-          <meshStandardMaterial color="#6b7a86" roughness={0.4} metalness={0.6} />
+      {/* Two fork tines */}
+      {[-0.05, 0.05].map((ox) => (
+        <mesh key={ox} position={[ox * s, -0.03 * s, 0.05 * s]}>
+          <boxGeometry args={[0.03 * s, 0.04 * s, 0.65 * s]} />
+          <meshStandardMaterial color="#9f1239" metalness={0.6} roughness={0.3} />
         </mesh>
       ))}
+      {/* Handle */}
+      <mesh position={[0, 0.28 * s, -0.22 * s]} rotation={[-0.4, 0, 0]}>
+        <cylinderGeometry args={[0.018 * s, 0.018 * s, 0.55 * s, 6]} />
+        <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
+      </mesh>
+      {/* Wheels */}
+      {[-0.05, 0.05].map((ox) =>
+        [-0.25, 0.27].map((oz) => (
+          <mesh key={`${ox}${oz}`} position={[ox * s, -0.05 * s, oz * s]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.05 * s, 0.05 * s, 0.03 * s, 10]} />
+            <meshStandardMaterial color="#1e293b" roughness={0.8} />
+          </mesh>
+        )),
+      )}
     </group>
   );
 }
 
-// ─── Blast chiller / cold room ─────────────────────────────────────────────────
+function PlatformScale({
+  position,
+  s = 1,
+}: {
+  position: [number, number, number];
+  s?: number;
+}) {
+  return (
+    <group position={position}>
+      {/* Scale platform */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[0.38 * s, 0.05 * s, 0.32 * s]} />
+        <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+      </mesh>
+      {/* Display column */}
+      <mesh castShadow position={[0.15 * s, 0.32 * s, 0]}>
+        <boxGeometry args={[0.04 * s, 0.55 * s, 0.04 * s]} />
+        <meshStandardMaterial color="#374151" metalness={0.5} roughness={0.4} />
+      </mesh>
+      {/* Display head */}
+      <mesh position={[0.15 * s, 0.62 * s, 0.06 * s]} rotation={[-0.3, 0, 0]}>
+        <boxGeometry args={[0.14 * s, 0.08 * s, 0.04 * s]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.3} />
+      </mesh>
+      {/* Display screen */}
+      <mesh position={[0.15 * s, 0.62 * s, 0.09 * s]} rotation={[-0.3, 0, 0]}>
+        <boxGeometry args={[0.1 * s, 0.04 * s, 0.005 * s]} />
+        <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={1.0} roughness={0.1} />
+      </mesh>
+    </group>
+  );
+}
+
+// ─── 2. SOAKING TANK ───────────────────────────────────────────────────────────
 /**
- * Insulated box with a door panel, hinges, and a handle strip.
+ * Large open-top stainless tank on heavy legs, water level sight glass on side,
+ * fill/drain pipes, overflow weir, thermometer.
  */
-export function ChillerModel({ scale = 1 }: { scale?: number }) {
-  const w = 1.1 * scale;
-  const h = 1.3 * scale;
-  const d = 0.85 * scale;
+export function SoakingTankModel({ scale: s = 1 }: { scale?: number }) {
+  const r = 0.48 * s;
+  const h = 1.0 * s;
+  const legH = 0.3 * s;
+
+  return (
+    <group position={[0, legH, 0]}>
+      {/* Main cylindrical body */}
+      <mesh castShadow receiveShadow>
+        <cylinderGeometry args={[r, r, h, 24]} />
+        <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+      </mesh>
+      {/* Open top rim */}
+      <mesh position={[0, h / 2, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[r + 0.015 * s, 0.025 * s, 6, 24]} />
+        <meshStandardMaterial color="#8a9bb0" metalness={0.9} roughness={0.2} />
+      </mesh>
+      {/* Water surface (teal/blue, slightly transparent) */}
+      <mesh position={[0, h * 0.32, 0]}>
+        <cylinderGeometry args={[r * 0.97, r * 0.97, 0.01 * s, 24]} />
+        <meshStandardMaterial color="#38bdf8" transparent opacity={0.72} roughness={0.05} metalness={0} emissive="#0ea5e9" emissiveIntensity={0.15} />
+      </mesh>
+      {/* Weld seam rings */}
+      {[-h * 0.2, h * 0.2].map((y, i) => (
+        <mesh key={i} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[r * 1.004, 0.007 * s, 4, 24]} />
+          <meshStandardMaterial color="#9aaab5" metalness={0.85} roughness={0.2} />
+        </mesh>
+      ))}
+      {/* Sight glass on side */}
+      <mesh position={[r + 0.015 * s, 0, 0]}>
+        <boxGeometry args={[0.025 * s, h * 0.7, 0.08 * s]} />
+        <meshStandardMaterial color="#bae6fd" transparent opacity={0.8} roughness={0.05} metalness={0.1} emissive="#7dd3fc" emissiveIntensity={0.2} />
+      </mesh>
+      {/* Fill pipe (inlet top) */}
+      <mesh position={[0, h / 2 + 0.18 * s, r * 0.5]} rotation={[0.4, 0, 0]}>
+        <cylinderGeometry args={[0.04 * s, 0.04 * s, 0.38 * s, 8]} />
+        <meshStandardMaterial color="#8a9bb0" metalness={0.9} roughness={0.2} />
+      </mesh>
+      {/* Drain pipe (bottom outlet) */}
+      <mesh position={[0, -h / 2 - 0.05 * s, r * 0.3]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.04 * s, 0.04 * s, 0.2 * s, 8]} />
+        <meshStandardMaterial color="#8a9bb0" metalness={0.9} roughness={0.2} />
+      </mesh>
+      {/* Butterfly valve on drain */}
+      <mesh position={[0, -h / 2 - 0.05 * s, r * 0.3 + 0.1 * s]}>
+        <cylinderGeometry args={[0.06 * s, 0.06 * s, 0.04 * s, 8]} />
+        <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
+      </mesh>
+      {/* Legs */}
+      {[[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([lx, lz], i) => (
+        <mesh key={i} castShadow position={[lx * r * 0.72, -h / 2 - legH / 2, lz * r * 0.72]}>
+          <cylinderGeometry args={[0.04 * s, 0.04 * s, legH, 6]} />
+          <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.35} />
+        </mesh>
+      ))}
+      {/* Side thermometer */}
+      <mesh position={[-r - 0.02 * s, h * 0.1, 0]}>
+        <cylinderGeometry args={[0.025 * s, 0.025 * s, 0.22 * s, 8]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.7} roughness={0.3} />
+      </mesh>
+      <Gauge position={[-r - 0.02 * s, h * 0.25, 0]} s={s} rotY={-Math.PI / 2} />
+      <Ladder height={h + legH + 0.05} x={-r - 0.06 * s} s={s} />
+      <BrandPlate position={[0, h * 0.1, r + 0.02 * s]} s={s} />
+    </group>
+  );
+}
+
+// ─── 3. COOKING KETTLE (CCP) ────────────────────────────────────────────────
+/**
+ * Jacketed steam kettle: hemispherical bottom, tilt trunnions, lid with vent,
+ * pressure gauge, steam pipe, animated steam particles.
+ */
+export function CookingKettleModel({ scale: s = 1 }: { scale?: number }) {
+  const r = 0.52 * s;
+  const hCyl = 0.85 * s;
+  const legH = 0.4 * s;
+
+  // Steam particle refs
+  const steamRef = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (!steamRef.current) return;
+    const t = clock.elapsedTime;
+    steamRef.current.children.forEach((c, i) => {
+      const phase = (t * 0.9 + i * 0.28) % 1;
+      c.position.y = legH + hCyl + r * 0.5 + phase * 1.2 * s;
+      c.position.x = Math.sin(t * 1.5 + i * 1.2) * 0.08 * s;
+      const op = Math.max(0, 1 - phase * 1.6);
+      (c as Mesh).scale.setScalar(0.5 + phase * 1.5);
+      ((c as Mesh).material as THREE.MeshStandardMaterial).opacity = op * 0.55;
+    });
+  });
+
+  // Tilt wheel animation
+  const wheelRef = useRef<Mesh>(null);
+  useFrame((_, dt) => {
+    if (wheelRef.current) wheelRef.current.rotation.z += dt * 0.5;
+  });
 
   return (
     <group>
-      {/* Insulated box */}
-      <mesh castShadow receiveShadow position={[0, h / 2, 0]}>
-        <boxGeometry args={[w, h, d]} />
-        <meshStandardMaterial color="#dde4ea" roughness={0.6} metalness={0.1} />
-      </mesh>
+      {/* Tilt trunnion supports (two pedestals) */}
+      {[-1, 1].map((side) => (
+        <group key={side}>
+          <mesh castShadow position={[side * (r + 0.22 * s), legH * 0.6, 0]}>
+            <boxGeometry args={[0.12 * s, legH * 1.2, 0.18 * s]} />
+            <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.35} />
+          </mesh>
+          {/* Trunnion pin */}
+          <mesh position={[side * (r + 0.22 * s), legH * 1.1, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.06 * s, 0.06 * s, 0.14 * s, 10]} />
+            <meshStandardMaterial color={STEEL_COLOR} metalness={0.9} roughness={0.2} />
+          </mesh>
+        </group>
+      ))}
 
-      {/* Door panel (slightly proud) */}
-      <mesh castShadow position={[0, h / 2, d / 2 + 0.008 * scale]}>
-        <boxGeometry args={[w * 0.72, h * 0.82, 0.015 * scale]} />
-        <meshStandardMaterial color="#b5c5d5" roughness={0.4} metalness={0.5} />
-      </mesh>
-
-      {/* Door handle */}
-      <mesh castShadow position={[w * 0.28, h / 2, d / 2 + 0.04 * scale]}>
-        <boxGeometry args={[0.06 * scale, h * 0.35, 0.055 * scale]} />
-        <meshStandardMaterial color="#8899aa" roughness={0.2} metalness={0.9} />
-      </mesh>
-
-      {/* Two hinges */}
-      {[-h * 0.28, h * 0.28].map((y, i) => (
-        <mesh key={i} castShadow position={[-w * 0.32, h / 2 + y, d / 2 + 0.02 * scale]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.03 * scale, 0.03 * scale, 0.07 * scale, 8]} />
-          <meshStandardMaterial color="#778899" roughness={0.25} metalness={0.9} />
+      {/* Kettle assembly at tilt pivot height */}
+      <group position={[0, legH, 0]}>
+        {/* Cylindrical upper body */}
+        <mesh castShadow receiveShadow position={[0, hCyl / 2, 0]}>
+          <cylinderGeometry args={[r, r, hCyl, 24]} />
+          <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.22} />
         </mesh>
-      ))}
+        {/* Hemispherical bottom */}
+        <mesh castShadow position={[0, 0, 0]}>
+          <sphereGeometry args={[r, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
+          <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.22} />
+        </mesh>
+        {/* Heating jacket band */}
+        <mesh position={[0, hCyl * 0.25, 0]}>
+          <cylinderGeometry args={[r + 0.045 * s, r + 0.045 * s, hCyl * 0.6, 24]} />
+          <meshStandardMaterial color="#9fb0be" roughness={0.4} metalness={0.7} transparent opacity={0.65} />
+        </mesh>
+        {/* Steam inlet to jacket (bottom) */}
+        <mesh position={[r + 0.05 * s, hCyl * 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.04 * s, 0.04 * s, 0.14 * s, 8]} />
+          <meshStandardMaterial color="#8a9bb0" metalness={0.9} roughness={0.2} />
+        </mesh>
+        {/* Condensate outlet (bottom jacket) */}
+        <mesh position={[-r - 0.05 * s, hCyl * 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.035 * s, 0.035 * s, 0.12 * s, 8]} />
+          <meshStandardMaterial color="#8a9bb0" metalness={0.9} roughness={0.2} />
+        </mesh>
 
-      {/* Fan grills on the side */}
-      {[h * 0.3, h * 0.7].map((y, i) => (
-        <ChillerFan key={i} position={[w / 2 + 0.01 * scale, y, 0]} scale={scale} />
-      ))}
-      {/* Status strip above door */}
-      <mesh position={[0, h * 0.95, d / 2 + 0.012 * scale]}>
-        <boxGeometry args={[w * 0.6, 0.04 * scale, 0.01 * scale]} />
-        <meshStandardMaterial color="#c4b5fd" emissive="#8b5cf6" emissiveIntensity={1.2} />
-      </mesh>
+        {/* Lid */}
+        <mesh castShadow position={[0, hCyl, 0]}>
+          <cylinderGeometry args={[r * 0.98, r, 0.06 * s, 24]} />
+          <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.22} />
+        </mesh>
+        {/* Lid dome */}
+        <mesh position={[0, hCyl + 0.02 * s, 0]}>
+          <sphereGeometry args={[r * 0.88, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#c8d0d8" metalness={0.8} roughness={0.25} />
+        </mesh>
+        {/* Vent nozzle on lid */}
+        <mesh position={[0.08 * s, hCyl + 0.35 * s, 0]}>
+          <cylinderGeometry args={[0.04 * s, 0.04 * s, 0.55 * s, 8]} />
+          <meshStandardMaterial color="#8a9bb0" metalness={0.9} roughness={0.2} />
+        </mesh>
 
-      {/* Compressor box on top-back */}
-      <mesh castShadow position={[0, h + 0.12 * scale, -d * 0.2]}>
-        <boxGeometry args={[w * 0.55, 0.22 * scale, d * 0.55]} />
-        <meshStandardMaterial color="#9aaabb" roughness={0.5} metalness={0.6} />
-      </mesh>
+        {/* Two large pressure gauges */}
+        <Gauge position={[0, hCyl * 0.55, r + 0.02 * s]} s={s * 1.2} />
+        <Gauge position={[r + 0.02 * s, hCyl * 0.55, 0]} s={s} rotY={Math.PI / 2} />
+
+        {/* Tilt hand-wheel on right trunnion */}
+        <group position={[r + 0.3 * s, hCyl * 0.5, 0]}>
+          <mesh ref={wheelRef} rotation={[0, 0, Math.PI / 2]}>
+            <torusGeometry args={[0.16 * s, 0.025 * s, 6, 20]} />
+            <meshStandardMaterial color="#374151" metalness={0.6} roughness={0.35} />
+          </mesh>
+          {/* Spokes */}
+          {[0, 1, 2, 3].map((k) => (
+            <mesh key={k} rotation={[0, 0, (k * Math.PI) / 2]}>
+              <boxGeometry args={[0.005 * s, 0.3 * s, 0.012 * s]} />
+              <meshStandardMaterial color="#475569" metalness={0.6} roughness={0.4} />
+            </mesh>
+          ))}
+        </group>
+
+        <Ladder height={hCyl + 0.3} x={-r - 0.07 * s} s={s} />
+        <BrandPlate position={[0, hCyl * 0.6, r + 0.02 * s]} s={s} />
+      </group>
+
+      {/* Animated steam puffs */}
+      <group ref={steamRef}>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <mesh key={i} position={[0, legH + hCyl + 0.5 * s, 0]}>
+            <sphereGeometry args={[0.22 * s, 8, 6]} />
+            <meshStandardMaterial color="#e0f2fe" transparent opacity={0.45} roughness={1} depthWrite={false} />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
 
-function ChillerFan({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+// ─── 4. STONE MILL / TAHINI GRINDER ────────────────────────────────────────────
+/**
+ * Stone mill: large hopper on top feeding between two grinding stones,
+ * motor block on the side, outlet spout below, support frame.
+ */
+export function StoneMill({ scale: s = 1 }: { scale?: number }) {
+  // Slow upper-stone rotation
+  const stoneRef = useRef<Mesh>(null);
+  useFrame((_, dt) => {
+    if (stoneRef.current) stoneRef.current.rotation.y += dt * 0.6;
+  });
+
+  const stoneR = 0.4 * s;
+
+  return (
+    <group>
+      {/* Support frame base */}
+      <mesh castShadow receiveShadow position={[0, 0.1 * s, 0]}>
+        <boxGeometry args={[0.95 * s, 0.2 * s, 0.75 * s]} />
+        <meshStandardMaterial color="#475569" metalness={0.6} roughness={0.4} />
+      </mesh>
+      {/* Frame uprights */}
+      {[[-0.4, -0.3], [0.4, -0.3], [0.4, 0.3], [-0.4, 0.3]].map(([fx, fz], i) => (
+        <mesh key={i} castShadow position={[fx * s, 0.55 * s, fz * s]}>
+          <boxGeometry args={[0.07 * s, 0.9 * s, 0.07 * s]} />
+          <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.35} />
+        </mesh>
+      ))}
+      {/* Cross-beam */}
+      <mesh position={[0, 0.95 * s, 0]}>
+        <boxGeometry args={[0.92 * s, 0.07 * s, 0.7 * s]} />
+        <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.35} />
+      </mesh>
+
+      {/* Lower stone (stationary) */}
+      <mesh castShadow position={[0, 0.55 * s, 0]}>
+        <cylinderGeometry args={[stoneR, stoneR, 0.18 * s, 32]} />
+        <meshStandardMaterial color="#78716c" roughness={0.95} metalness={0.02} />
+      </mesh>
+      {/* Groove pattern on lower stone */}
+      {[0, 1, 2, 3, 4, 5].map((k) => (
+        <mesh key={k} position={[0, 0.64 * s, 0]} rotation={[0, (k * Math.PI) / 6, 0]}>
+          <boxGeometry args={[stoneR * 1.8, 0.01 * s, 0.02 * s]} />
+          <meshStandardMaterial color="#57534e" roughness={1} />
+        </mesh>
+      ))}
+
+      {/* Upper stone (rotating) */}
+      <mesh ref={stoneRef} castShadow position={[0, 0.82 * s, 0]}>
+        <cylinderGeometry args={[stoneR * 0.97, stoneR * 0.97, 0.18 * s, 32]} />
+        <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0.05} />
+      </mesh>
+      {/* Central spindle hole in upper stone */}
+      <mesh position={[0, 0.82 * s, 0]}>
+        <cylinderGeometry args={[0.05 * s, 0.05 * s, 0.2 * s, 10]} />
+        <meshStandardMaterial color="#292524" roughness={0.8} />
+      </mesh>
+
+      {/* Enclosure ring around stones */}
+      <mesh position={[0, 0.68 * s, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[stoneR + 0.08 * s, 0.06 * s, 6, 32]} />
+        <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+      </mesh>
+
+      {/* Feed hopper (conical) */}
+      <mesh castShadow position={[0, 1.38 * s, 0]}>
+        <cylinderGeometry args={[0.28 * s, 0.11 * s, 0.55 * s, 16]} />
+        <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+      </mesh>
+      {/* Hopper lid */}
+      <mesh castShadow position={[0, 1.67 * s, 0]}>
+        <cylinderGeometry args={[0.3 * s, 0.28 * s, 0.07 * s, 16]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.3} />
+      </mesh>
+      {/* Hopper viewing window */}
+      <mesh position={[0.25 * s, 1.45 * s, 0]}>
+        <boxGeometry args={[0.03 * s, 0.22 * s, 0.1 * s]} />
+        <meshStandardMaterial color="#bae6fd" transparent opacity={0.75} roughness={0.05} emissive="#7dd3fc" emissiveIntensity={0.1} />
+      </mesh>
+
+      {/* Motor block */}
+      <mesh castShadow position={[0.58 * s, 0.62 * s, 0]}>
+        <boxGeometry args={[0.24 * s, 0.28 * s, 0.26 * s]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.5} metalness={0.4} />
+      </mesh>
+      {/* Motor cooling fins */}
+      {[0, 1, 2, 3].map((k) => (
+        <mesh key={k} position={[0.72 * s, (0.52 + k * 0.07) * s, 0]}>
+          <boxGeometry args={[0.02 * s, 0.02 * s, 0.24 * s]} />
+          <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.4} />
+        </mesh>
+      ))}
+      {/* Drive shaft */}
+      <mesh position={[0.35 * s, 0.62 * s, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.035 * s, 0.035 * s, 0.24 * s, 8]} />
+        <meshStandardMaterial color={STEEL_COLOR} metalness={0.9} roughness={0.15} />
+      </mesh>
+
+      {/* Outlet spout */}
+      <mesh castShadow position={[0.12 * s, 0.3 * s, 0]} rotation={[0, 0, -0.6]}>
+        <cylinderGeometry args={[0.04 * s, 0.06 * s, 0.32 * s, 8]} />
+        <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+      </mesh>
+      {/* Outlet receiving tray */}
+      <mesh position={[0.28 * s, 0.1 * s, 0]}>
+        <boxGeometry args={[0.22 * s, 0.04 * s, 0.18 * s]} />
+        <meshStandardMaterial color="#374151" metalness={0.5} roughness={0.5} />
+      </mesh>
+
+      <BrandPlate position={[0, 0.35 * s, 0.38 * s]} s={s} />
+    </group>
+  );
+}
+
+// ─── 5. BLAST CHILLER (CCP) ─────────────────────────────────────────────────────
+/**
+ * Insulated blast chiller: twin-door cabinet, refrigeration unit on top,
+ * spinning fan grilles, temperature display panel.
+ */
+export function ChillerModel({ scale: s = 1 }: { scale?: number }) {
+  const w = 1.2 * s;
+  const h = 1.5 * s;
+  const d = 0.85 * s;
+
+  return (
+    <group>
+      {/* Insulated cabinet body */}
+      <mesh castShadow receiveShadow position={[0, h / 2, 0]}>
+        <boxGeometry args={[w, h, d]} />
+        <meshStandardMaterial color="#dde4ea" roughness={0.55} metalness={0.15} />
+      </mesh>
+
+      {/* Left door panel */}
+      <mesh castShadow position={[-w * 0.26, h * 0.48, d / 2 + 0.007 * s]}>
+        <boxGeometry args={[w * 0.43, h * 0.78, 0.016 * s]} />
+        <meshStandardMaterial color="#b8c8d8" roughness={0.4} metalness={0.5} />
+      </mesh>
+      {/* Right door panel */}
+      <mesh castShadow position={[w * 0.26, h * 0.48, d / 2 + 0.007 * s]}>
+        <boxGeometry args={[w * 0.43, h * 0.78, 0.016 * s]} />
+        <meshStandardMaterial color="#b8c8d8" roughness={0.4} metalness={0.5} />
+      </mesh>
+      {/* Door gap line */}
+      <mesh position={[0, h * 0.48, d / 2 + 0.009 * s]}>
+        <boxGeometry args={[0.012 * s, h * 0.78, 0.005 * s]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.5} roughness={0.4} />
+      </mesh>
+      {/* Door handles */}
+      {[-1, 1].map((side) => (
+        <mesh key={side} castShadow position={[side * w * 0.08, h / 2, d / 2 + 0.05 * s]}>
+          <boxGeometry args={[0.055 * s, h * 0.3, 0.05 * s]} />
+          <meshStandardMaterial color="#7a8a9a" roughness={0.2} metalness={0.9} />
+        </mesh>
+      ))}
+      {/* Hinges */}
+      {[-1, 1].map((side) =>
+        [-h * 0.28, h * 0.28].map((y, j) => (
+          <mesh key={`${side}${j}`} castShadow position={[side * w * 0.44, h / 2 + y, d / 2 + 0.018 * s]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.025 * s, 0.025 * s, 0.065 * s, 8]} />
+            <meshStandardMaterial color="#64748b" metalness={0.9} roughness={0.2} />
+          </mesh>
+        )),
+      )}
+
+      {/* Refrigeration unit on top */}
+      <mesh castShadow position={[0, h + 0.13 * s, 0]}>
+        <boxGeometry args={[w * 0.85, 0.26 * s, d * 0.8]} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.5} metalness={0.6} />
+      </mesh>
+      {/* Compressor pipe */}
+      <mesh position={[w * 0.35, h + 0.25 * s, 0]}>
+        <cylinderGeometry args={[0.035 * s, 0.035 * s, 0.18 * s, 8]} />
+        <meshStandardMaterial color="#8a9bb0" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* Fan grilles on side */}
+      {[h * 0.28, h * 0.72].map((y, i) => (
+        <ChillerFan key={i} position={[w / 2 + 0.01 * s, y, 0]} s={s} />
+      ))}
+
+      {/* Temperature display strip at top */}
+      <mesh position={[0, h * 0.92, d / 2 + 0.01 * s]}>
+        <boxGeometry args={[w * 0.55, 0.055 * s, 0.012 * s]} />
+        <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={1.5} roughness={0.1} toneMapped={false} />
+      </mesh>
+      {/* Display label box */}
+      <mesh position={[0, h * 0.92, d / 2 + 0.02 * s]}>
+        <boxGeometry args={[w * 0.65, 0.08 * s, 0.015 * s]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.3} />
+      </mesh>
+
+      {/* Door seals / gasket lines */}
+      <mesh position={[0, h * 0.48, d / 2 + 0.002 * s]}>
+        <boxGeometry args={[w * 0.93, h * 0.83, 0.005 * s]} />
+        <meshStandardMaterial color="#64748b" roughness={0.5} transparent opacity={0.3} />
+      </mesh>
+
+      <BrandPlate position={[-w * 0.32, h * 0.08, d / 2 + 0.02 * s]} s={s} />
+    </group>
+  );
+}
+
+function ChillerFan({
+  position,
+  s = 1,
+}: {
+  position: [number, number, number];
+  s?: number;
+}) {
   const blades = useRef<Group>(null);
   useFrame((_, dt) => {
-    if (blades.current) blades.current.rotation.x += dt * 6;
+    if (blades.current) blades.current.rotation.x += dt * 8;
   });
   return (
     <group position={position} rotation={[0, Math.PI / 2, 0]}>
+      {/* grill ring */}
       <mesh>
-        <torusGeometry args={[0.18 * scale, 0.02 * scale, 6, 24]} />
+        <torusGeometry args={[0.19 * s, 0.022 * s, 6, 24]} />
         <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
       </mesh>
-      {[0.06, 0.12].map((rr) => (
+      {[0.07, 0.13].map((rr) => (
         <mesh key={rr}>
-          <torusGeometry args={[rr * scale, 0.006 * scale, 4, 20]} />
+          <torusGeometry args={[rr * s, 0.005 * s, 4, 20]} />
           <meshStandardMaterial color="#64748b" metalness={0.8} />
         </mesh>
       ))}
       <group ref={blades} rotation={[0, Math.PI / 2, 0]}>
         {[0, 1, 2, 3].map((k) => (
           <mesh key={k} rotation={[(k * Math.PI) / 2, 0, 0]} position={[0, 0, 0]}>
-            <boxGeometry args={[0.01 * scale, 0.3 * scale, 0.05 * scale]} />
+            <boxGeometry args={[0.008 * s, 0.32 * s, 0.05 * s]} />
             <meshStandardMaterial color="#1e293b" />
           </mesh>
         ))}
@@ -300,214 +712,330 @@ function ChillerFan({ position, scale = 1 }: { position: [number, number, number
   );
 }
 
-// ─── Metal detector arch ───────────────────────────────────────────────────────
-export function MetalDetectorModel({ scale = 1 }: { scale?: number }) {
-  const w = 0.9 * scale;
-  const h = 1.5 * scale;
-  const thick = 0.12 * scale;
-  const d = 0.28 * scale;
+// ─── 6. METAL DETECTOR ARCH (CCP) ────────────────────────────────────────────
+/**
+ * Conveyor belt passing through a rectangular detector arch,
+ * status light, control box with display, reject bin on side.
+ */
+export function MetalDetectorModel({ scale: s = 1 }: { scale?: number }) {
+  const archW = 0.95 * s;
+  const archH = 1.4 * s;
+  const thick = 0.13 * s;
+  const archD = 0.3 * s;
+
+  // Animate belt
+  const beltRef = useRef<Mesh>(null);
+  useFrame((_, dt) => {
+    if (beltRef.current) {
+      (beltRef.current.material as THREE.MeshStandardMaterial).map?.offset.addScalar(-dt * 0.4);
+    }
+  });
+
+  // Blink status light
+  const lightRef = useRef<Mesh>(null);
+  useFrame(({ clock }) => {
+    if (lightRef.current) {
+      const on = Math.sin(clock.elapsedTime * 3) > 0;
+      ((lightRef.current).material as THREE.MeshStandardMaterial).emissiveIntensity = on ? 1.5 : 0.3;
+    }
+  });
 
   return (
     <group>
+      {/* Conveyor belt frame */}
+      {[-1, 1].map((side) => (
+        <mesh key={side} castShadow position={[0, 0.82 * s, side * 0.32 * s]}>
+          <boxGeometry args={[2.0 * s, 0.08 * s, 0.04 * s]} />
+          <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.35} />
+        </mesh>
+      ))}
+      {/* Belt surface */}
+      <mesh ref={beltRef} castShadow receiveShadow position={[0, 0.86 * s, 0]}>
+        <boxGeometry args={[2.0 * s, 0.04 * s, 0.6 * s]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.8} />
+      </mesh>
+      {/* Belt rollers */}
+      {[-0.85, -0.4, 0, 0.4, 0.85].map((rx) => (
+        <mesh key={rx} position={[rx * s, 0.82 * s, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.04 * s, 0.04 * s, 0.62 * s, 10]} />
+          <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+        </mesh>
+      ))}
+      {/* Leg supports */}
+      {[-0.85, 0.85].map((rx) =>
+        [-1, 1].map((side) => (
+          <mesh key={`${rx}${side}`} castShadow position={[rx * s, 0.41 * s, side * 0.28 * s]}>
+            <boxGeometry args={[0.04 * s, 0.82 * s, 0.04 * s]} />
+            <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.4} />
+          </mesh>
+        )),
+      )}
+
+      {/* Detector arch */}
       {/* Left upright */}
-      <mesh castShadow receiveShadow position={[-w / 2, h / 2, 0]}>
-        <boxGeometry args={[thick, h, d]} />
+      <mesh castShadow receiveShadow position={[-archW / 2, archH / 2 + 0.86 * s, 0]}>
+        <boxGeometry args={[thick, archH, archD]} />
         <meshStandardMaterial color="#1e3a5f" roughness={0.4} metalness={0.5} />
       </mesh>
-
       {/* Right upright */}
-      <mesh castShadow receiveShadow position={[w / 2, h / 2, 0]}>
-        <boxGeometry args={[thick, h, d]} />
+      <mesh castShadow receiveShadow position={[archW / 2, archH / 2 + 0.86 * s, 0]}>
+        <boxGeometry args={[thick, archH, archD]} />
         <meshStandardMaterial color="#1e3a5f" roughness={0.4} metalness={0.5} />
       </mesh>
-
       {/* Top beam */}
-      <mesh castShadow position={[0, h, 0]}>
-        <boxGeometry args={[w + thick, thick, d]} />
+      <mesh castShadow position={[0, archH + 0.86 * s, 0]}>
+        <boxGeometry args={[archW + thick, thick, archD]} />
         <meshStandardMaterial color="#1e3a5f" roughness={0.4} metalness={0.5} />
       </mesh>
+      {/* Sensor emitter strips on uprights */}
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[side * archW / 2, archH * 0.5 + 0.86 * s, archD * 0.12]}>
+          <boxGeometry args={[0.035 * s, archH * 0.65, 0.07 * s]} />
+          <meshStandardMaterial color="#2563eb" roughness={0.2} metalness={0.3} emissive="#1a3a80" emissiveIntensity={0.5} />
+        </mesh>
+      ))}
 
-      {/* Sensor panel left */}
-      <mesh position={[-w / 2, h * 0.5, d * 0.1]}>
-        <boxGeometry args={[0.04 * scale, h * 0.6, 0.08 * scale]} />
-        <meshStandardMaterial color="#2563eb" roughness={0.3} metalness={0.3} emissive="#1a3a80" emissiveIntensity={0.4} />
-      </mesh>
-
-      {/* Sensor panel right */}
-      <mesh position={[w / 2, h * 0.5, d * 0.1]}>
-        <boxGeometry args={[0.04 * scale, h * 0.6, 0.08 * scale]} />
-        <meshStandardMaterial color="#2563eb" roughness={0.3} metalness={0.3} emissive="#1a3a80" emissiveIntensity={0.4} />
-      </mesh>
-
-      {/* Control box on right upright */}
-      <mesh castShadow position={[w / 2 + 0.12 * scale, h * 0.65, 0]}>
-        <boxGeometry args={[0.2 * scale, 0.25 * scale, d * 0.8]} />
+      {/* Control box */}
+      <mesh castShadow position={[archW / 2 + 0.18 * s, archH * 0.65 + 0.86 * s, 0]}>
+        <boxGeometry args={[0.22 * s, 0.28 * s, archD * 0.85]} />
         <meshStandardMaterial color="#0f172a" roughness={0.5} metalness={0.4} />
       </mesh>
-      {/* Control display */}
-      <mesh position={[w / 2 + 0.23 * scale, h * 0.65, 0]}>
-        <boxGeometry args={[0.02 * scale, 0.12 * scale, 0.14 * scale]} />
-        <meshStandardMaterial color="#22c55e" roughness={0.1} metalness={0.1} emissive="#22c55e" emissiveIntensity={0.8} />
+      {/* Display screen */}
+      <mesh position={[archW / 2 + 0.3 * s, archH * 0.65 + 0.86 * s, 0]}>
+        <boxGeometry args={[0.02 * s, 0.13 * s, 0.16 * s]} />
+        <meshStandardMaterial color="#22c55e" roughness={0.1} metalness={0.1} emissive="#22c55e" emissiveIntensity={0.9} />
       </mesh>
+      {/* Status light (blinking) */}
+      <mesh ref={lightRef} position={[archW / 2 + 0.14 * s, archH * 0.88 + 0.86 * s, 0]}>
+        <sphereGeometry args={[0.055 * s, 8, 6]} />
+        <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={1.5} roughness={0.1} />
+      </mesh>
+
+      {/* Reject bin (stainless tray on side) */}
+      <group position={[archW / 2 + 0.2 * s, 0.86 * s, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.35 * s, 0.28 * s, 0.5 * s]} />
+          <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+        </mesh>
+        {/* Reject bin label strip */}
+        <mesh position={[0.18 * s, 0.1 * s, 0]}>
+          <boxGeometry args={[0.01 * s, 0.12 * s, 0.35 * s]} />
+          <meshStandardMaterial color="#dc2626" roughness={0.4} emissive="#dc2626" emissiveIntensity={0.3} />
+        </mesh>
+      </group>
+
+      <BrandPlate position={[0, archH + 0.92 * s, 0]} s={s} />
     </group>
   );
 }
 
-// ─── Packaging machine ─────────────────────────────────────────────────────────
+// ─── 7. PACKAGING MACHINE ─────────────────────────────────────────────────────
 /**
- * Horizontal form-fill-seal style machine: main frame + hopper + sealing head + conveyor out.
+ * Filling line: conveyor with tubs, filling nozzles, sealing head,
+ * carton stacker, control panel with display.
  */
-export function PackagingMachineModel({ scale = 1 }: { scale?: number }) {
-  const fw = 1.1 * scale;
-  const fh = 0.9 * scale;
-  const fd = 0.65 * scale;
+export function PackagingMachineModel({ scale: s = 1 }: { scale?: number }) {
+  const fw = 1.2 * s;
+  const fh = 0.95 * s;
+  const fd = 0.7 * s;
+
+  const convRef = useRef<Group>(null);
+  const nozzleRef = useRef<Group>(null);
+  useFrame((_, dt) => {
+    // tubs move along conveyor
+    if (convRef.current) {
+      convRef.current.children.forEach((c) => {
+        c.position.x += dt * 0.22 * s;
+        if (c.position.x > fw * 0.5) c.position.x -= fw * 0.9;
+      });
+    }
+    // filling nozzles bob up/down
+    if (nozzleRef.current) {
+      const t2 = Date.now() * 0.001;
+      nozzleRef.current.position.y = fh + 0.1 * s + Math.abs(Math.sin(t2 * 1.8)) * 0.08 * s;
+    }
+  });
 
   return (
     <group>
-      {/* Main frame */}
+      {/* Main machine frame */}
       <mesh castShadow receiveShadow position={[0, fh / 2, 0]}>
         <boxGeometry args={[fw, fh, fd]} />
-        <meshStandardMaterial color="#b8c4ce" roughness={0.35} metalness={0.65} />
+        <meshStandardMaterial color={STEEL_PAINTED} roughness={0.4} metalness={0.6} />
+      </mesh>
+      {/* Frame corner posts */}
+      {[[-0.55, -0.32], [0.55, -0.32], [0.55, 0.32], [-0.55, 0.32]].map(([px, pz], i) => (
+        <mesh key={i} castShadow position={[px * s, fh / 2, pz * s]}>
+          <boxGeometry args={[0.06 * s, fh + 0.1, 0.06 * s]} />
+          <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.35} />
+        </mesh>
+      ))}
+
+      {/* Infeed hopper */}
+      <mesh castShadow position={[-fw * 0.32, fh + 0.32 * s, 0]}>
+        <cylinderGeometry args={[0.24 * s, 0.1 * s, 0.6 * s, 14]} />
+        <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
+      </mesh>
+      {/* Hopper lid */}
+      <mesh position={[-fw * 0.32, fh + 0.63 * s, 0]}>
+        <cylinderGeometry args={[0.26 * s, 0.24 * s, 0.06 * s, 14]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.3} />
       </mesh>
 
-      {/* Hopper on top */}
-      <mesh castShadow position={[-fw * 0.25, fh + 0.22 * scale, 0]}>
-        <cylinderGeometry args={[0.22 * scale, 0.1 * scale, 0.42 * scale, 12]} />
-        <meshStandardMaterial color="#8a9fae" roughness={0.3} metalness={0.7} />
+      {/* Filling nozzles (animated group) */}
+      <group ref={nozzleRef} position={[0, fh + 0.1 * s, 0]}>
+        {[-0.2, 0, 0.2].map((nx) => (
+          <mesh key={nx} position={[nx * s, 0, 0]}>
+            <cylinderGeometry args={[0.04 * s, 0.025 * s, 0.22 * s, 8]} />
+            <meshStandardMaterial color={STEEL_COLOR} metalness={0.9} roughness={0.2} />
+          </mesh>
+        ))}
+        {/* Nozzle manifold */}
+        <mesh position={[0, 0.12 * s, 0]}>
+          <boxGeometry args={[0.56 * s, 0.05 * s, 0.06 * s]} />
+          <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.3} />
+        </mesh>
+      </group>
+
+      {/* Sealing head cross-bar */}
+      <mesh castShadow position={[fw * 0.2, fh * 0.72, 0]}>
+        <boxGeometry args={[0.13 * s, 0.2 * s, fd * 0.82]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.5} />
+      </mesh>
+      {/* Heat-seal band */}
+      <mesh position={[fw * 0.2, fh * 0.62, 0]}>
+        <boxGeometry args={[0.015 * s, 0.04 * s, fd * 0.72]} />
+        <meshStandardMaterial color="#dc2626" emissive="#dc2626" emissiveIntensity={0.6} roughness={0.3} />
       </mesh>
 
-      {/* Sealing head (cross-beam) */}
-      <mesh castShadow position={[fw * 0.18, fh * 0.75, 0]}>
-        <boxGeometry args={[0.12 * scale, 0.18 * scale, fd * 0.8]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.5} metalness={0.4} />
+      {/* Conveyor belt top */}
+      <mesh receiveShadow position={[0, fh, 0]}>
+        <boxGeometry args={[fw * 0.9, 0.04 * s, fd * 0.62]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.7} metalness={0.1} />
       </mesh>
+      {/* Moving tubs */}
+      <group ref={convRef}>
+        {[-0.38, -0.13, 0.12, 0.37].map((tx, k) => (
+          <mesh key={k} castShadow position={[tx * s, fh + 0.07 * s, 0]}>
+            <cylinderGeometry args={[0.065 * s, 0.055 * s, 0.1 * s, 12]} />
+            <meshStandardMaterial color="#fde68a" roughness={0.5} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Output conveyor */}
+      <ConveyorBelt position={[fw * 0.5 + 0.7 * s, fh * 0.38, 0]} length={1.3 * s} width={fd * 0.6} s={s} />
+
+      {/* Carton stacker area */}
+      <group position={[fw * 0.5 + 1.4 * s, 0, 0]}>
+        {[0, 1, 2].map((row) => (
+          <mesh key={row} castShadow position={[0, (0.12 + row * 0.14) * s, 0]}>
+            <boxGeometry args={[0.3 * s, 0.12 * s, fd * 0.55]} />
+            <meshStandardMaterial color={row % 2 ? '#fef3c7' : '#fde68a'} roughness={0.7} />
+          </mesh>
+        ))}
+      </group>
 
       {/* Control panel */}
-      <mesh castShadow position={[fw * 0.5 + 0.05 * scale, fh * 0.7, 0]}>
-        <boxGeometry args={[0.1 * scale, 0.3 * scale, fd * 0.5]} />
+      <mesh castShadow position={[fw * 0.5 + 0.08 * s, fh * 0.68, 0]}>
+        <boxGeometry args={[0.12 * s, 0.32 * s, fd * 0.5]} />
         <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.3} />
       </mesh>
       {/* Screen */}
-      <mesh position={[fw * 0.5 + 0.11 * scale, fh * 0.7, 0]}>
-        <boxGeometry args={[0.02 * scale, 0.18 * scale, 0.22 * scale]} />
-        <meshStandardMaterial color="#c4b5fd" roughness={0.1} emissive="#7c3aed" emissiveIntensity={0.6} />
+      <mesh position={[fw * 0.5 + 0.15 * s, fh * 0.68, 0]}>
+        <boxGeometry args={[0.02 * s, 0.18 * s, 0.22 * s]} />
+        <meshStandardMaterial color="#c4b5fd" roughness={0.1} emissive="#7c3aed" emissiveIntensity={0.7} />
       </mesh>
 
-      {/* Output conveyor with animated rollers and moving packs */}
-      <Conveyor position={[fw * 0.5 + 0.7 * scale, fh * 0.32, 0]} length={1.2 * scale} width={fd * 0.7} scale={scale} />
+      <BrandPlate position={[0, fh * 0.12, fd / 2 + 0.02 * s]} s={s} />
     </group>
   );
 }
 
-function Conveyor({ position, length, width, scale = 1 }: { position: [number, number, number]; length: number; width: number; scale?: number }) {
+function ConveyorBelt({
+  position,
+  length,
+  width,
+  s = 1,
+}: {
+  position: [number, number, number];
+  length: number;
+  width: number;
+  s?: number;
+}) {
   const rollers = useRef<Mesh[]>([]);
-  const packs = useRef<Group>(null);
-  const n = 9;
+  const n = 8;
   useFrame((_, dt) => {
     rollers.current.forEach((m) => m && (m.rotation.y -= dt * 5));
-    if (packs.current) {
-      packs.current.children.forEach((c) => {
-        c.position.x += dt * 0.25 * scale;
-        if (c.position.x > length / 2) c.position.x -= length;
-      });
-    }
   });
   return (
     <group position={position}>
       {[-1, 1].map((side) => (
         <mesh key={side} castShadow position={[0, 0, (side * width) / 2]}>
-          <boxGeometry args={[length, 0.08 * scale, 0.03 * scale]} />
+          <boxGeometry args={[length, 0.06 * s, 0.03 * s]} />
           <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.3} />
         </mesh>
       ))}
       {Array.from({ length: n }).map((_, i) => (
         <mesh
           key={i}
-          ref={(m) => { if (m) rollers.current[i] = m; }}
+          ref={(m) => {
+            if (m) rollers.current[i] = m;
+          }}
           position={[-length / 2 + (i + 0.5) * (length / n), 0, 0]}
           rotation={[Math.PI / 2, 0, 0]}
         >
-          <cylinderGeometry args={[0.035 * scale, 0.035 * scale, width, 10]} />
-          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+          <cylinderGeometry args={[0.032 * s, 0.032 * s, width, 10]} />
+          <meshStandardMaterial color={STEEL_COLOR} metalness={0.85} roughness={0.25} />
         </mesh>
       ))}
       {[-1, 1].map((side) =>
         [-1, 1].map((e) => (
-          <mesh key={`${side}${e}`} position={[(e * length) / 2.3, -0.16 * scale, (side * width) / 2]}>
-            <boxGeometry args={[0.03 * scale, 0.32 * scale, 0.03 * scale]} />
+          <mesh key={`${side}${e}`} position={[(e * length) / 2.2, -0.15 * s, (side * width) / 2]}>
+            <boxGeometry args={[0.03 * s, 0.3 * s, 0.03 * s]} />
             <meshStandardMaterial color="#475569" />
           </mesh>
         )),
       )}
-      <group ref={packs}>
-        {[0, 1, 2].map((k) => (
-          <mesh key={k} castShadow position={[-length / 2 + (k * length) / 3, 0.08 * scale, 0]}>
-            <boxGeometry args={[0.16 * scale, 0.09 * scale, 0.12 * scale]} />
-            <meshStandardMaterial color="#fde68a" roughness={0.6} />
-          </mesh>
-        ))}
-      </group>
     </group>
   );
 }
 
-// ─── Receiving dock with pallets ───────────────────────────────────────────────
-export function ReceivingDockModel({ scale = 1 }: { scale?: number }) {
-  return (
-    <group>
-      {/* Dock bumper / platform edge */}
-      <mesh castShadow receiveShadow position={[0, 0.06 * scale, -0.5 * scale]}>
-        <boxGeometry args={[1.4 * scale, 0.12 * scale, 0.18 * scale]} />
-        <meshStandardMaterial color="#374151" roughness={0.8} metalness={0.2} />
-      </mesh>
+// ─── Station model type registry ─────────────────────────────────────────────
 
-      {/* Two pallets stacked */}
-      <Pallet scale={scale} position={[-0.4 * scale, 0, 0]} />
-      <Pallet scale={scale} position={[0.4 * scale, 0, 0]} />
+export type EquipmentModelType =
+  | 'receiving-dock'
+  | 'soaking-tank'
+  | 'cooking-kettle'
+  | 'stone-mill'
+  | 'chiller'
+  | 'metal-detector'
+  | 'packaging'
+  | 'generic';
 
-      {/* Temp probe post */}
-      <mesh castShadow position={[0.72 * scale, 0.55 * scale, 0.1 * scale]}>
-        <cylinderGeometry args={[0.03 * scale, 0.03 * scale, 1.1 * scale, 6]} />
-        <SteelMat color="#aab5be" />
-      </mesh>
-      {/* Probe sensor head */}
-      <mesh castShadow position={[0.72 * scale, 0.55 * scale, 0.38 * scale]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.055 * scale, 0.055 * scale, 0.14 * scale, 8]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.5} metalness={0.4} />
-      </mesh>
-    </group>
-  );
-}
+/**
+ * Map station ID / name to the correct equipment model type.
+ * Falls back to 'generic'.
+ */
+export function resolveModelType(id: string, name: string): EquipmentModelType {
+  const i = id.toLowerCase();
+  const n = name.toLowerCase();
 
-function Pallet({ scale = 1, position }: { scale?: number; position: [number, number, number] }) {
-  const pw = 0.6 * scale;
-  const ph = 0.14 * scale;
-  const pd = 0.5 * scale;
+  if (i.includes('receiving') || i.includes('receive') || n.includes('קבלה')) return 'receiving-dock';
+  if (i.includes('cooling') || i.includes('chiller') || n.includes('קירור')) return 'chiller';
+  if (i.includes('metal') || i.includes('detector') || n.includes('גלאי')) return 'metal-detector';
+  if (i.includes('packaging') || i.includes('pack') || n.includes('אריזה')) return 'packaging';
+  if (i.includes('cooking') || i.includes('cook') || n.includes('בישול')) return 'cooking-kettle';
+  if (i.includes('tahini') || n.includes('טחינה') || i.includes('grind') || i.includes('mill')) return 'stone-mill';
+  if (i.includes('soaking') || i.includes('soak') || n.includes('השריה')) return 'soaking-tank';
 
-  return (
-    <group position={position}>
-      {/* Pallet deck */}
-      <mesh castShadow receiveShadow position={[0, ph / 2, 0]}>
-        <boxGeometry args={[pw, ph, pd]} />
-        <meshStandardMaterial color="#a07850" roughness={0.9} metalness={0.05} />
-      </mesh>
-      {/* Deck boards gaps (just visual suggestion via color) */}
-      <mesh position={[0, ph + 0.01 * scale, 0]}>
-        <boxGeometry args={[pw, 0.015 * scale, pd]} />
-        <meshStandardMaterial color="#8a6640" roughness={0.95} metalness={0.02} />
-      </mesh>
-      {/* Load boxes stacked on pallet */}
-      <mesh castShadow position={[0, ph + 0.18 * scale, 0]}>
-        <boxGeometry args={[pw * 0.85, 0.32 * scale, pd * 0.85]} />
-        <meshStandardMaterial color="#e8c878" roughness={0.85} metalness={0.0} />
-      </mesh>
-    </group>
-  );
+  return 'generic';
 }
 
 // ─── Generic machine fallback ─────────────────────────────────────────────────
+
 export function GenericMachineModel({
-  scale = 1,
+  scale: s = 1,
   controlType = 'PRP',
 }: {
   scale?: number;
@@ -519,58 +1047,52 @@ export function GenericMachineModel({
     PRP: '#374151',
   };
   const color = colors[controlType] ?? '#374151';
-  const h = controlType === 'CCP' ? 1.2 * scale : controlType === 'CP' ? 1.0 * scale : 0.8 * scale;
+  const h = controlType === 'CCP' ? 1.2 * s : controlType === 'CP' ? 1.0 * s : 0.8 * s;
 
   return (
     <group>
-      {/* Main body */}
       <mesh castShadow receiveShadow position={[0, h / 2, 0]}>
-        <boxGeometry args={[0.8 * scale, h, 0.6 * scale]} />
+        <boxGeometry args={[0.8 * s, h, 0.6 * s]} />
         <meshStandardMaterial color={color} roughness={0.4} metalness={0.55} />
       </mesh>
-      {/* Control panel face */}
-      <mesh castShadow position={[0, h * 0.65, 0.31 * scale]}>
-        <boxGeometry args={[0.35 * scale, 0.22 * scale, 0.02 * scale]} />
+      <mesh castShadow position={[0, h * 0.65, 0.31 * s]}>
+        <boxGeometry args={[0.35 * s, 0.22 * s, 0.02 * s]} />
         <meshStandardMaterial color="#0f172a" roughness={0.4} metalness={0.2} />
       </mesh>
-      {/* Indicator light */}
-      <mesh position={[0, h * 0.65, 0.325 * scale]}>
-        <sphereGeometry args={[0.04 * scale, 8, 6]} />
+      <mesh position={[0, h * 0.65, 0.325 * s]}>
+        <sphereGeometry args={[0.04 * s, 8, 6]} />
         <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.7} roughness={0.1} />
       </mesh>
     </group>
   );
 }
 
-// ─── Station ID → model type lookup ───────────────────────────────────────────
-export type EquipmentModelType =
-  | 'tank'
-  | 'kettle'
-  | 'chiller'
-  | 'metal-detector'
-  | 'packaging'
-  | 'receiving-dock'
-  | 'generic';
+// ─── EquipmentModel (public entry point) ─────────────────────────────────────
 
 /**
- * Given a station id and name (lowercased), return the equipment model type.
- * Falls back to 'generic'.
+ * Label anchor heights in world units at scale=3.
+ * Values = actual model top-height (model_units * scale=3) + small clearance.
  */
-export function resolveModelType(id: string, name: string): EquipmentModelType {
-  const n = name.toLowerCase();
-  const i = id.toLowerCase();
+const HEIGHT_BY_MODEL: Record<EquipmentModelType, number> = {
+  'receiving-dock': 4.2,   // dock ~0.4 + sack stack ~0.9 → ~1.3 * 3 ≈ 3.9
+  'soaking-tank':   5.2,   // tank h=1.0 + legH=0.3 + fill pipe ≈ 1.5 * 3 = 4.5
+  'cooking-kettle': 6.0,   // legH=0.4 + hCyl=0.85 + vent top ≈ 1.8 * 3 = 5.4
+  'stone-mill':     5.8,   // hopper lid 1.7 * 3 = 5.1
+  'chiller':        5.8,   // cabinet h=1.5 + refrig 0.39 ≈ 1.9 * 3 = 5.7
+  'metal-detector': 6.8,   // arch top = belt 0.86 + arch 1.4 = 2.26 * 3 = 6.8
+  'packaging':      5.0,   // frame fh=0.95 + hopper + lid ≈ 1.7 * 3 = 5.1
+  'generic':        3.9,
+};
 
-  if (i.includes('receiving') || i.includes('receive') || n.includes('קבלה')) return 'receiving-dock';
-  if (i.includes('cooling') || i.includes('chiller') || n.includes('קירור')) return 'chiller';
-  if (i.includes('metal') || i.includes('detector') || n.includes('גלאי')) return 'metal-detector';
-  if (i.includes('packaging') || i.includes('pack') || n.includes('אריזה')) return 'packaging';
-  if (i.includes('cooking') || i.includes('cook') || n.includes('בישול')) return 'kettle';
-  if (i.includes('soaking') || i.includes('soak') || i.includes('tahini') || i.includes('mix')) return 'tank';
+const WORKER_SPOT: Partial<Record<EquipmentModelType, [number, number, number]>> = {
+  'receiving-dock':  [0.2,  0, 0.75],
+  'cooking-kettle':  [0.8,  0, 0.65],
+  'chiller':         [-0.9, 0, 0.65],
+  'packaging':       [-0.3, 0, 0.75],
+  'metal-detector':  [0.65, 0, 0.55],
+  'stone-mill':      [-0.8, 0, 0.65],
+};
 
-  return 'generic';
-}
-
-/** Render the right equipment model for a station, offset so it sits on the floor. */
 export function EquipmentModel({
   modelType,
   controlType,
@@ -584,18 +1106,15 @@ export function EquipmentModel({
   return (
     <group>
       <EquipmentBody modelType={modelType} controlType={controlType} scale={scale} />
-      {worker && <WorkerFigure position={[worker[0] * scale, 0, worker[2] * scale]} phase={worker[0] * 3} />}
+      {worker && (
+        <WorkerFigure
+          position={[worker[0] * scale, 0, worker[2] * scale]}
+          phase={worker[0] * 3}
+        />
+      )}
     </group>
   );
 }
-
-const WORKER_SPOT: Partial<Record<EquipmentModelType, [number, number, number]>> = {
-  'receiving-dock': [0.2, 0, 0.75],
-  kettle: [0.8, 0, 0.6],
-  chiller: [-0.9, 0, 0.6],
-  packaging: [-0.3, 0, 0.75],
-  'metal-detector': [0.6, 0, 0.55],
-};
 
 function EquipmentBody({
   modelType,
@@ -607,19 +1126,16 @@ function EquipmentBody({
   scale?: number;
 }) {
   switch (modelType) {
-    case 'receiving-dock':
-      return <ReceivingDockModel scale={scale} />;
-    case 'chiller':
-      return <ChillerModel scale={scale} />;
-    case 'metal-detector':
-      return <MetalDetectorModel scale={scale} />;
-    case 'packaging':
-      return <PackagingMachineModel scale={scale} />;
-    case 'kettle':
-      return <KettleModel scale={scale} />;
-    case 'tank':
-      return <TankModel scale={scale} />;
-    default:
-      return <GenericMachineModel scale={scale} controlType={controlType} />;
+    case 'receiving-dock':  return <ReceivingDockModel scale={scale} />;
+    case 'soaking-tank':    return <SoakingTankModel scale={scale} />;
+    case 'cooking-kettle':  return <CookingKettleModel scale={scale} />;
+    case 'stone-mill':      return <StoneMill scale={scale} />;
+    case 'chiller':         return <ChillerModel scale={scale} />;
+    case 'metal-detector':  return <MetalDetectorModel scale={scale} />;
+    case 'packaging':       return <PackagingMachineModel scale={scale} />;
+    default:                return <GenericMachineModel scale={scale} controlType={controlType} />;
   }
 }
+
+// Export HEIGHT_BY_MODEL so station-marker can use it
+export { HEIGHT_BY_MODEL };

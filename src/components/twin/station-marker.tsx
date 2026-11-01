@@ -8,7 +8,7 @@ import type { Mesh, Group } from 'three';
 import type { StationDTO } from '@/app/[locale]/twin/page';
 import type { Locale } from '@/i18n';
 import { getDictionary } from '@/i18n';
-import { EquipmentModel, resolveModelType } from './equipment-models';
+import { EquipmentModel, resolveModelType, HEIGHT_BY_MODEL } from './equipment-models';
 import { brand, stationStatus } from '@/theme/asadra';
 
 // ── Screen-space label collision registry ─────────────────────────────────────
@@ -85,43 +85,41 @@ interface StationMarkerProps {
   hideLabel?: boolean;
 }
 
-/** Visual height of the equipment model at 3x scale */
-const HEIGHT_BY_TYPE: Record<string, number> = {
-  CCP: 4.8,
-  CP: 3.9,
-  PRP: 3.3,
+/** Floor-outline ring radius per controlType (at scale=3, in world units) */
+const FLOOR_RING_RADIUS: Record<string, number> = {
+  CCP: 2.1,
+  CP: 1.8,
+  PRP: 1.5,
 };
 
-/** Radius used for the status ring at 3x scale */
-const RING_RADIUS: Record<string, number> = {
-  CCP: 1.95,
-  CP: 1.65,
-  PRP: 1.35,
-};
-
-/** Status indicator ring at the top of the model */
-function StatusRing({
+/**
+ * Thin floor-level status outline ring.
+ * Much subtler than the old raised torus — just a flat ring on the floor plane,
+ * coloured by status, thin tube so it doesn't dominate the scene.
+ */
+function FloorRing({
   radius: r,
-  height,
   color,
   pulse,
   ringRef,
 }: {
   radius: number;
-  height: number;
   color: string;
   pulse: boolean;
   ringRef: React.RefObject<Mesh>;
 }) {
   return (
-    <mesh ref={ringRef} position={[0, height + 0.12, 0]}>
-      <torusGeometry args={[r, 0.09, 8, 32]} />
+    <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+      <torusGeometry args={[r, 0.045, 4, 48]} />
       <meshStandardMaterial
         color={color}
-        roughness={0.1}
-        metalness={0.2}
+        roughness={0.3}
+        metalness={0.1}
         emissive={color}
-        emissiveIntensity={pulse ? 2.5 : 1.0}
+        emissiveIntensity={pulse ? 2.2 : 0.7}
+        transparent
+        opacity={pulse ? 0.95 : 0.7}
+        depthWrite={false}
       />
     </mesh>
   );
@@ -156,14 +154,14 @@ export default function StationMarker({
 
   const { camera, gl, raycaster, size } = useThree();
 
-  const height = HEIGHT_BY_TYPE[station.controlType] ?? 1.1;
-  const ringR = RING_RADIUS[station.controlType] ?? 0.5;
+  const modelType = resolveModelType(station.id, station.name);
+  // HEIGHT_BY_MODEL values are already in world units at scale=3
+  const height = HEIGHT_BY_MODEL[modelType] ?? 3.6;
+  const ringR = FLOOR_RING_RADIUS[station.controlType] ?? 1.5;
   const color = stationStatus[station.status as keyof typeof stationStatus] ?? stationStatus.NO_DATA;
   const isOutOfRange = station.status === 'OUT_OF_RANGE';
 
-  const modelType = resolveModelType(station.id, station.name);
-
-  // World-space label anchor — above the status ring
+  // World-space label anchor — above the model
   const labelWorldPos = useRef(new THREE.Vector3());
   const screenPos = useRef(new THREE.Vector3());
 
@@ -311,14 +309,17 @@ export default function StationMarker({
         onClick(station);
       }}
     >
+      {/* Thin floor-level status outline ring */}
+      <FloorRing radius={ringR} color={color} pulse={isOutOfRange} ringRef={ringRef} />
+
       {/* Hover highlight ring on floor */}
       {hovered && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-          <ringGeometry args={[ringR * 0.85, ringR * 1.1, 32]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 0]}>
+          <ringGeometry args={[ringR * 0.88, ringR * 1.15, 40]} />
           <meshStandardMaterial
             color={brand[400]}
             transparent
-            opacity={0.3}
+            opacity={0.28}
             depthWrite={false}
           />
         </mesh>
@@ -326,9 +327,6 @@ export default function StationMarker({
 
       {/* Realistic procedural equipment model */}
       <EquipmentModel modelType={modelType} controlType={station.controlType} scale={3} />
-
-      {/* Status ring above equipment */}
-      <StatusRing radius={ringR} height={height} color={color} pulse={isOutOfRange} ringRef={ringRef} />
 
       {/* Label — constant screen-size (no distanceFactor), LOD dot vs full */}
       {!hideLabel && (

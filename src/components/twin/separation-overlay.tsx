@@ -84,7 +84,8 @@ function IssueSegment({
   const to: [number, number, number] = [resolved.to.x, Y, resolved.to.z];
   const mid = {
     x: (resolved.from.x + resolved.to.x) / 2,
-    z: (resolved.from.z + resolved.to.z) / 2,
+    // Offset in Z so the chip sits beside the station, not on top of it
+    z: (resolved.from.z + resolved.to.z) / 2 + 2.4 + index * 0.8,
   };
 
   const tooltipText = t.separation[resolved.issue.kind];
@@ -97,9 +98,9 @@ function IssueSegment({
   const len = Math.hypot(dx, dz);
   const ang = Math.atan2(dx, dz);
 
-  // Stacking offset: each issue badge sits 1.4 u higher than the previous
-  // so badges never overlap each other.  Base height 5.5 u clears station labels.
-  const BADGE_Y = 5.5 + index * 1.4;
+  // Badge sits at a fixed low height (1.5 u) beside the station,
+  // Z-offset (applied to mid.z above) spaces them so they don't overlap.
+  const BADGE_Y = 1.5;
 
   useFrame(({ clock }) => {
     const t2 = clock.elapsedTime;
@@ -108,7 +109,7 @@ function IssueSegment({
         0.35 + 0.25 * Math.sin(t2 * 4);
     }
     if (iconRef.current) {
-      iconRef.current.position.y = 2.6 + Math.sin(t2 * 2) * 0.2;
+      iconRef.current.position.y = 1.5 + Math.sin(t2 * 2) * 0.12;
       iconRef.current.rotation.y = t2 * 1.2;
     }
     if (!cameraTarget) return;
@@ -161,8 +162,8 @@ function IssueSegment({
         />
       </mesh>
 
-      {/* Floating 3-D warning icon */}
-      <group ref={iconRef} position={[mid.x, 2.6, mid.z]}>
+      {/* Floating 3-D warning icon — beside station at low height */}
+      <group ref={iconRef} position={[mid.x, 1.5, mid.z]}>
         <mesh>
           <cylinderGeometry args={[0.7, 0.7, 0.12, 3]} />
           <meshStandardMaterial
