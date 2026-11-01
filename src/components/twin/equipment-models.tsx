@@ -69,7 +69,7 @@ export function WorkerFigure({ position, color = '#f8fafc', phase = 0 }: { posit
       {/* hairnet cap */}
       <mesh position={[0, 1.04, 0]}>
         <sphereGeometry args={[0.115, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#60a5fa" roughness={0.9} />
+        <meshStandardMaterial color="#a78bfa" roughness={0.9} />
       </mesh>
     </group>
   );
@@ -390,7 +390,7 @@ export function PackagingMachineModel({ scale = 1 }: { scale?: number }) {
       {/* Screen */}
       <mesh position={[fw * 0.5 + 0.11 * scale, fh * 0.7, 0]}>
         <boxGeometry args={[0.02 * scale, 0.18 * scale, 0.22 * scale]} />
-        <meshStandardMaterial color="#60a5fa" roughness={0.1} emissive="#3b82f6" emissiveIntensity={0.6} />
+        <meshStandardMaterial color="#c4b5fd" roughness={0.1} emissive="#7c3aed" emissiveIntensity={0.6} />
       </mesh>
 
       {/* Output conveyor with animated rollers and moving packs */}
