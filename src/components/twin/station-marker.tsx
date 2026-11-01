@@ -195,7 +195,7 @@ export default function StationMarker({
     // Update label world position from the group
     if (groupRef.current) {
       groupRef.current.getWorldPosition(labelWorldPos.current);
-      labelWorldPos.current.y += height + 2.0;
+      labelWorldPos.current.y += height * 0.55 + 0.6;
     }
     // LOD check — update local state only on transitions to avoid React re-renders every frame
     const d = cam.position.distanceTo(labelWorldPos.current);
@@ -332,7 +332,7 @@ export default function StationMarker({
       {!hideLabel && (
         <Html
           center
-          position={[0, height + 2.0, 0]}
+          position={[0, height * 0.55 + 0.6, 0]}
           zIndexRange={[10, 20]}
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
