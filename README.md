@@ -78,7 +78,7 @@ src/app/[locale]/       # Next.js pages (server components load + validate data)
 src/components/twin/    # React / R3F client components
 src/i18n/               # Locale dictionaries (he = Hebrew RTL, en = English)
 tests/domain/           # Vitest unit tests (99 tests)
-bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–16; sessions 15–16 session 15 ran on a second team budget, TECHZONE)
+bob_sessions/           # Screenshots of Bob IDE Task Session summaries (00–16; sessions 15–16 ran on a second team budget, TECHZONE)
 docs/                   # SPEC.md · INTEGRATION.md
 ```
 
