@@ -120,12 +120,18 @@ export default async function TwinPage({ params }: { params: { locale: string } 
     const status = getStationStatus(station, lastReading, now);
     return {
       id: station.id,
-      name: station.name,
+      name: station.nameEn ?? station.name,
       nameEn: station.nameEn,
+      fields: station.fields.map((f) => ({
+        ...f,
+        label: FIELD_EN[f.key] ?? f.label,
+        unit: f.unit === 'שעות' ? 'h' : f.unit,
+        monitoringFrequency: f.monitoringFrequency ? FREQ_EN[f.monitoringFrequency] ?? f.monitoringFrequency : undefined,
+        correctiveActionText: f.correctiveActionText ? CA_EN[f.correctiveActionText] ?? f.correctiveActionText : undefined,
+      })),
       controlType: station.controlType,
       position: station.position,
       zoneId: station.zoneId,
-      fields: station.fields,
       status,
       lastReadings: readings.slice(0, 5),
     };
@@ -173,11 +179,11 @@ export default async function TwinPage({ params }: { params: { locale: string } 
     });
 
   const dto: TwinDTO = {
-    siteName: dataset.site.name,
+    siteName: dataset.site.nameEn ?? dataset.site.name,
     siteNameEn: dataset.site.nameEn,
     siteWidth: dataset.site.widthM,
     siteDepth: dataset.site.depthM,
-    zones: dataset.zones,
+    zones: dataset.zones.map((z) => ({ ...z, name: z.nameEn ?? z.name })),
     stations: stationDTOs,
     flowSegments,
     separationIssues,
