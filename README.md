@@ -163,9 +163,11 @@ The app is English only. `/` and any `/he/...` URL redirect to `/en/twin`, and t
 - `c5df2dc`: round-3 UI polish: dark glass theme, a header with logo, live clock and KPI strip (CCPs OK, open deviations, chain integrity), English guided tour on /en, simulator cycles (cooling breaches again about 45 s after a corrective action, and the cooking CCP briefly goes STALE every minute; 2 new tests), more detailed equipment (ladders, gauges, chiller fans, packaging conveyor with moving rollers), worker figures, thicker glowing pipes with flow pulses, compact zone tags, a bold separation overlay (glowing dashed path, warning beacon, badge) and a 3 s camera fly-in on load.
 - Final polish commit: the two separation badges are offset so both can be read, and the worker figures are larger.
 
+**Demo video (English, ~2 min):** https://drive.google.com/file/d/1z-GrHAkmU3OnzY3BLmJv9MJLf3uHnnU2/view
+
 ### How to demo (about 60 seconds)
 1. Open https://asadra-digital-twin.vercel.app/en/twin. The app opens in **Live** mode: every station reads fresh simulated data and shows a green ring.
 2. Wait about 10–20 s. The **Cooling (CCP)** temperature drifts past its 5 °C critical limit. Its ring turns red and pulses, and a red **CCP breach** toast appears.
 3. Click the Cooling station (3D or chip) to open the side panel: last 5 readings, with out-of-range values in red, and the limits.
 4. Click **✓ Apply corrective action**. The cooling CCP is reset to 3 °C, the toast closes and the ring turns green again. The header KPIs update live. If you keep watching, cooling drifts and breaches again about 45 s later, and the cooking CCP sometimes shows STALE for a few seconds (a simulated sensor dropout).
-5. **Live / Paused** toggles the simulation. Also try **Separation check** (raw→high-care and sesame cross-contact), **Edit mode** (drag stations), **Guided tour**, and the **עב/EN** switch.
+5. **Live / Paused** toggles the simulation. Also try **Separation check** (raw→high-care and sesame cross-contact), **Edit mode** (drag stations), and **Guided tour**; click any station to focus the camera on it.
